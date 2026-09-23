@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------
+   Lumen & Leaf design tokens.
+   Ported from the lumen-leaf-patient-records prototype so the app
+   and the existing site read as one brand.
+   --------------------------------------------------------------- */
+
+:root {
+  --ivory: #f6efde;
+  --ivory-dim: #ede0c2;
+  --sage: #b8892b;
+  --sage-deep: #8f6a1e;
+  --rose: #a9763a;
+  --rose-soft: #ead9b4;
+  --ink: #2c2418;
+  --ink-soft: #7c6c4e;
+  --line: #dcc89c;
+  --white: #fffcf3;
+  --err: #a8483a;
+  --blue: #6b5330;
+  --blue-soft: #e4d9c2;
+}
+
+/* Follow the OS unless the viewer has explicitly chosen light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ivory: #221b0f;
+    --ivory-dim: #2a2113;
+    --ink: #f1e4c4;
+    --ink-soft: #c7b384;
+    --white: #2e2415;
+    --line: #4a3a1f;
+  }
+}
+
+/* Explicit opt-in, so a theme toggle can override the OS later. */
+:root[data-theme="dark"] {
+  --ivory: #221b0f;
+  --ivory-dim: #2a2113;
+  --ink: #f1e4c4;
+  --ink-soft: #c7b384;
+  --white: #2e2415;
+  --line: #4a3a1f;
+}
+
+/* Expose the tokens to Tailwind: bg-ivory, text-ink-soft, border-line, ... */
+@theme inline {
+  --color-ivory: var(--ivory);
+  --color-ivory-dim: var(--ivory-dim);
+  --color-sage: var(--sage);
+  --color-sage-deep: var(--sage-deep);
+  --color-rose: var(--rose);
+  --color-rose-soft: var(--rose-soft);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-paper: var(--white);
+  --color-err: var(--err);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
+
+  --font-sans: var(--font-work-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  --radius-card: 2px;
+}
+
+body {
+  background: var(--ivory);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Only the print sheet should reach the printer. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
