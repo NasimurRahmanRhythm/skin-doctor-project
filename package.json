@@ -9,7 +9,8 @@
     "lint": "eslint",
     "seed": "node --env-file=.env.local scripts/seed.mjs",
     "verify:schema": "node --env-file=.env.local scripts/verify-schema.mjs",
-    "verify:rls": "node --env-file=.env.local scripts/verify-rls.mjs"
+    "verify:rls": "node --env-file=.env.local scripts/verify-rls.mjs",
+    "verify:reception": "node --env-file=.env.local scripts/verify-reception.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

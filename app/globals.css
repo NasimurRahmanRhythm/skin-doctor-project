@@ -85,4 +85,30 @@ h3 {
   .no-print {
     display: none !important;
   }
+
+  /* Paper is always white, whatever the screen is doing. Without this, a
+     nurse whose OS is in dark mode prints pale cream text onto white paper
+     and gets a near-blank prescription. */
+  :root,
+  :root:not([data-theme="light"]),
+  :root[data-theme="dark"] {
+    --ivory: #ffffff;
+    --ivory-dim: #f2f2f2;
+    --white: #ffffff;
+    --ink: #000000;
+    --ink-soft: #444444;
+    --line: #999999;
+    --sage: #6b5220;
+    --sage-deep: #4f3c17;
+    --rose: #8a5f2e;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  @page {
+    margin: 16mm 14mm;
+  }
 }
