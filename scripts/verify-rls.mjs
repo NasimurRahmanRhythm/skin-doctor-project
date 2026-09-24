@@ -124,9 +124,21 @@ console.log("\nReceptionist has no clinical access");
   if ((entries?.length ?? 0) === 0) pass("receptionist sees zero visit_entries");
   else fail("receptionist CAN read clinical entries", `${entries.length} rows`);
 
-  const { data: visits } = await s.reception.from("visits").select("id");
-  if ((visits?.length ?? 0) === 0) pass("receptionist sees no visits they did not create");
-  else fail("receptionist sees other visits", `${visits.length} rows`);
+  // Not "sees nothing" — a receptionist legitimately sees their own check-ins,
+  // and asserting zero would only hold on an empty database. The rule is that
+  // nothing created by anyone else is visible.
+  const { data: me } = await s.reception
+    .from("staff")
+    .select("id")
+    .eq("email", E.reception)
+    .single();
+  const { data: visits } = await s.reception.from("visits").select("id, receptionist_id");
+  const foreign = (visits ?? []).filter((v) => v.receptionist_id !== me.id);
+  if (foreign.length === 0) {
+    pass(`receptionist sees only their own check-ins (${visits?.length ?? 0})`);
+  } else {
+    fail("receptionist sees check-ins made by others", `${foreign.length} rows`);
+  }
 }
 
 console.log("\nColumn guard");

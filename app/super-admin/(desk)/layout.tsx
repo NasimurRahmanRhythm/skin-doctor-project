@@ -1,4 +1,6 @@
-import { requireStaff, ROLE_LABEL } from "@/lib/auth";
+import DeskNotifications from "@/components/desk-notifications";
+import { requireStaff, ROLE_HOME, ROLE_LABEL } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { signOut } from "../login/actions";
 
 /**
@@ -10,9 +12,32 @@ export default async function DeskLayout({
 }: LayoutProps<"/super-admin">) {
   const staff = await requireStaff();
 
+  // Only the nurse and doctor desks receive hand-offs, so only they open a
+  // realtime channel.
+  const wantsAlerts = staff.role === "nurse" || staff.role === "doctor";
+  let unread: {
+    id: string;
+    visit_id: string | null;
+    title: string;
+    body: string | null;
+    created_at: string;
+  }[] = [];
+
+  if (wantsAlerts) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("notifications")
+      .select("id, visit_id, title, body, created_at")
+      .eq("recipient_id", staff.id)
+      .is("read_at", null)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    unread = data ?? [];
+  }
+
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="no-print flex flex-wrap items-baseline justify-between gap-3 border-b border-line bg-paper px-7 py-5">
+      <header className="no-print flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-7 py-5">
         <div>
           <span className="font-serif text-xl">
             Lum<em className="italic text-rose">e</em>n &amp; Leaf
@@ -21,7 +46,15 @@ export default async function DeskLayout({
             {ROLE_LABEL[staff.role]}
           </span>
         </div>
-        <div className="flex items-baseline gap-4">
+
+        <div className="flex items-center gap-5">
+          {wantsAlerts && (
+            <DeskNotifications
+              staffId={staff.id}
+              basePath={ROLE_HOME[staff.role]}
+              initial={unread}
+            />
+          )}
           <span className="text-sm text-ink-soft">{staff.full_name}</span>
           <form action={signOut}>
             <button

@@ -10,7 +10,10 @@
     "seed": "node --env-file=.env.local scripts/seed.mjs",
     "verify:schema": "node --env-file=.env.local scripts/verify-schema.mjs",
     "verify:rls": "node --env-file=.env.local scripts/verify-rls.mjs",
-    "verify:reception": "node --env-file=.env.local scripts/verify-reception.mjs"
+    "verify:reception": "node --env-file=.env.local scripts/verify-reception.mjs",
+    "verify:storage": "node --env-file=.env.local scripts/verify-storage.mjs",
+    "verify:handoff": "node --env-file=.env.local scripts/verify-handoff.mjs",
+    "verify:bundle": "node --env-file=.env.local scripts/verify-bundle.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
