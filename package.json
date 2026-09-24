@@ -13,7 +13,8 @@
     "verify:reception": "node --env-file=.env.local scripts/verify-reception.mjs",
     "verify:storage": "node --env-file=.env.local scripts/verify-storage.mjs",
     "verify:handoff": "node --env-file=.env.local scripts/verify-handoff.mjs",
-    "verify:bundle": "node --env-file=.env.local scripts/verify-bundle.mjs"
+    "verify:bundle": "node --env-file=.env.local scripts/verify-bundle.mjs",
+    "verify:owner": "node --env-file=.env.local scripts/verify-owner.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
