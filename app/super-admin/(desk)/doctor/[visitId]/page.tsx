@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { card, cardPad, ENTRY_TYPE_LABEL, Person } from "@/components/ui";
 import VisitSummary from "@/components/visit-summary";
 import { requireRole } from "@/lib/auth";
 import { formatClinicDate, formatClinicTime } from "@/lib/clinic";
@@ -10,10 +11,12 @@ import { ConsultForm, EntryForm } from "./consult-form";
 function Vital({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <span className="block text-[11px] uppercase tracking-wider text-ink-soft">
+      <span className="block text-[11px] font-bold uppercase tracking-wider text-muted">
         {label}
       </span>
-      <span className="text-sm text-ink">{value || "—"}</span>
+      <span className="mt-0.5 block text-sm font-semibold text-fg">
+        {value || "—"}
+      </span>
     </div>
   );
 }
@@ -29,7 +32,8 @@ export default async function DoctorVisitPage({
     .from("visits")
     .select(
       `id, visit_code, visit_type, chief_complaint, created_at, status, patient_id,
-       height_cm, weight_kg, blood_pressure, blood_sugar, temperature, pulse, nurse_notes, nurse_id,
+       height_cm, weight_kg, blood_pressure, blood_sugar, temperature, pulse, nurse_notes,
+       nurse_id, receptionist_id,
        diagnosis, prescription, advice, follow_up_date,
        patients(full_name, patient_code, phone, age, gender)`,
     )
@@ -41,10 +45,14 @@ export default async function DoctorVisitPage({
 
   const patient = Array.isArray(visit.patients) ? visit.patients[0] : visit.patients;
 
-  const [{ data: nurse }, { data: entries }, { data: history }] = await Promise.all([
-    visit.nurse_id
-      ? supabase.from("staff_directory").select("full_name").eq("id", visit.nurse_id).maybeSingle()
-      : Promise.resolve({ data: null }),
+  const handlerIds = [visit.nurse_id, visit.receptionist_id].filter(
+    Boolean,
+  ) as string[];
+
+  const [{ data: handlers }, { data: entries }, { data: history }] = await Promise.all([
+    handlerIds.length
+      ? supabase.from("staff_directory").select("id, full_name").in("id", handlerIds)
+      : Promise.resolve({ data: [] }),
     supabase
       .from("visit_entries")
       .select("id, type, title, body, file_path, file_name, file_type, created_at")
@@ -61,6 +69,12 @@ export default async function DoctorVisitPage({
       .limit(10),
   ]);
 
+  const handlerById = new Map((handlers ?? []).map((s) => [s.id, s.full_name]));
+  const nurseName = visit.nurse_id ? handlerById.get(visit.nurse_id) ?? null : null;
+  const receptionistName = visit.receptionist_id
+    ? handlerById.get(visit.receptionist_id) ?? null
+    : null;
+
   // Files live in a private bucket, so each one needs its own short-lived link.
   const withLinks = await Promise.all(
     (entries ?? []).map(async (e) => {
@@ -75,15 +89,15 @@ export default async function DoctorVisitPage({
   const completed = visit.status === "completed";
 
   return (
-    <div className="space-y-6">
+    <div className="animate-rise space-y-6">
       <div className="no-print flex items-center justify-between">
-        <Link href="/super-admin/doctor" className="text-sm text-sage underline underline-offset-2">
+        <Link href="/super-admin/doctor" className="text-sm font-bold text-primary underline-offset-4 transition-ui hover:underline">
           ← Back to queue
         </Link>
         <Link
           href={`/super-admin/print/${visit.id}?scope=${completed ? "full" : "doctor"}`}
           target="_blank"
-          className="border border-sage px-5 py-2 text-xs font-medium text-sage hover:bg-ivory-dim rounded-card"
+          className="inline-flex items-center gap-2 rounded-control border border-hairline bg-surface px-4 py-2 text-xs font-bold text-fg transition-ui hover:border-primary hover:bg-primary-soft hover:text-primary"
         >
           Print
         </Link>
@@ -96,15 +110,21 @@ export default async function DoctorVisitPage({
           chief_complaint: visit.chief_complaint,
           created_at: visit.created_at,
           patient: patient ?? null,
+          receptionistName,
+          nurseName,
         }}
       />
 
-      <section className="border border-line bg-paper px-8 py-7 rounded-card">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-serif text-lg">Vitals</h2>
-          <span className="text-xs text-ink-soft">
-            {nurse ? `taken by ${nurse.full_name}` : "—"}
-          </span>
+      <section className={`${card} ${cardPad}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-extrabold">Vitals</h2>
+          {nurseName ? (
+            <span className="inline-flex items-center gap-2 text-xs font-semibold text-muted">
+              taken by <Person name={nurseName} role="nurse" />
+            </span>
+          ) : (
+            <span className="text-xs text-muted">—</span>
+          )}
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-6">
           <Vital label="Height" value={visit.height_cm ? `${visit.height_cm} cm` : null} />
@@ -115,25 +135,25 @@ export default async function DoctorVisitPage({
           <Vital label="Pulse" value={visit.pulse ? `${visit.pulse} bpm` : null} />
         </div>
         {visit.nurse_notes && (
-          <p className="mt-4 whitespace-pre-wrap border-t border-line pt-4 text-sm">
+          <p className="mt-4 whitespace-pre-wrap border-t border-hairline pt-4 text-sm">
             {visit.nurse_notes}
           </p>
         )}
       </section>
 
       {history && history.length > 0 && (
-        <section className="border border-line bg-paper px-8 py-7 rounded-card">
-          <h2 className="font-serif text-lg">
+        <section className="rounded-card border border-hairline bg-surface px-5 py-5 shadow-card sm:px-7 sm:py-6">
+          <h2 className="text-base font-extrabold">
             Previous visits ({history.length})
           </h2>
-          <ul className="mt-4 divide-y divide-line">
+          <ul className="mt-4 divide-y divide-hairline">
             {history.map((h) => (
               <li key={h.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
-                <span className="text-sm text-ink">
+                <span className="text-sm text-fg">
                   {formatClinicDate(h.created_at)}
-                  <span className="ml-3 text-xs text-ink-soft">{h.visit_code}</span>
+                  <span className="ml-3 text-xs text-muted">{h.visit_code}</span>
                 </span>
-                <span className="max-w-md text-right text-xs text-ink-soft">
+                <span className="max-w-md text-right text-xs text-muted">
                   {h.diagnosis ?? (h.status === "completed" ? "no diagnosis recorded" : h.status)}
                 </span>
               </li>
@@ -154,17 +174,17 @@ export default async function DoctorVisitPage({
       />
 
       {withLinks.length > 0 && (
-        <section className="border border-line bg-paper px-8 py-7 rounded-card">
-          <h2 className="font-serif text-lg">Record history</h2>
+        <section className="rounded-card border border-hairline bg-surface px-5 py-5 shadow-card sm:px-7 sm:py-6">
+          <h2 className="text-base font-extrabold">Record history</h2>
           <ul className="mt-4 space-y-5">
             {withLinks.map((e) => (
-              <li key={e.id} className="border-l-2 border-line pl-4">
+              <li key={e.id} className="border-l-2 border-hairline pl-4">
                 <div className="flex flex-wrap items-baseline gap-3">
-                  <span className="rounded-full bg-ivory-dim px-2 py-0.5 text-[11px] text-ink-soft">
-                    {e.type}
+                  <span className="rounded-full bg-subtle px-2.5 py-1 text-[11px] font-bold text-muted">
+                    {ENTRY_TYPE_LABEL[e.type] ?? e.type}
                   </span>
-                  <span className="font-serif">{e.title}</span>
-                  <span className="text-xs text-ink-soft">
+                  <span className="font-bold">{e.title}</span>
+                  <span className="text-xs text-muted">
                     {formatClinicDate(e.created_at)} {formatClinicTime(e.created_at)}
                   </span>
                 </div>
@@ -174,7 +194,7 @@ export default async function DoctorVisitPage({
                     href={e.url}
                     target="_blank"
                     rel="noopener"
-                    className="mt-2 inline-block text-xs text-sage underline"
+                    className="mt-2 inline-block text-xs text-primary underline"
                   >
                     {e.file_name ?? "Attached file"}
                   </a>

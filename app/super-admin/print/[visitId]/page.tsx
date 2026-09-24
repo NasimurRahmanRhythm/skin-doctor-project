@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ENTRY_TYPE_LABEL } from "@/components/ui";
 import { requireStaff } from "@/lib/auth";
 import { formatClinicDate, formatClinicTime } from "@/lib/clinic";
 import { createClient } from "@/lib/supabase/server";
@@ -22,7 +23,7 @@ const INCLUDES: Record<Scope, { vitals: boolean; clinical: boolean; timeline: bo
 function Row({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <span className="block text-[10px] uppercase tracking-wider text-ink-soft">
+      <span className="block text-[10px] uppercase tracking-wider text-muted">
         {label}
       </span>
       <strong className="text-sm font-medium">{value || "—"}</strong>
@@ -52,7 +53,7 @@ export default async function PrintPage({
     .from("visits")
     .select(
       `id, visit_code, status, visit_type, chief_complaint, created_at,
-       doctor_id, nurse_id,
+       doctor_id, nurse_id, receptionist_id,
        height_cm, weight_kg, blood_pressure, blood_sugar, temperature, pulse, nurse_notes,
        diagnosis, prescription, advice, follow_up_date,
        patients(full_name, patient_code, phone, age, gender, address)`,
@@ -76,7 +77,9 @@ export default async function PrintPage({
   // Staff names come from the directory view, not by embedding public.staff.
   // Only the owner can read that table, so embedding it left the doctor line
   // blank on every slip the front desk printed.
-  const staffIds = [visit.doctor_id, visit.nurse_id].filter(Boolean) as string[];
+  const staffIds = [visit.doctor_id, visit.nurse_id, visit.receptionist_id].filter(
+    Boolean,
+  ) as string[];
   const { data: staffRows } = staffIds.length
     ? await supabase
         .from("staff_directory")
@@ -87,6 +90,9 @@ export default async function PrintPage({
   const byId = new Map((staffRows ?? []).map((r) => [r.id, r]));
   const doctor = visit.doctor_id ? byId.get(visit.doctor_id) ?? null : null;
   const nurse = visit.nurse_id ? byId.get(visit.nurse_id) ?? null : null;
+  const receptionist = visit.receptionist_id
+    ? byId.get(visit.receptionist_id) ?? null
+    : null;
 
   let entries: { id: string; type: string; title: string; body: string | null; created_at: string }[] = [];
   if (show.timeline) {
@@ -99,14 +105,14 @@ export default async function PrintPage({
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-10 py-10 text-ink">
+    <main className="mx-auto max-w-3xl px-10 py-10 text-fg">
       <PrintTrigger />
 
-      <header className="flex items-end justify-between border-b-2 border-sage pb-4">
-        <div className="font-serif text-2xl">
-          Lum<em className="italic text-rose">e</em>n &amp; Leaf
+      <header className="flex items-end justify-between border-b-2 border-primary pb-4">
+        <div className="text-2xl font-semibold tracking-tight">
+          Lumen <span className="text-muted">&amp;</span> Leaf
         </div>
-        <div className="text-right text-xs text-ink-soft">
+        <div className="text-right text-xs text-muted">
           Skin &amp; Body Studio
           <br />
           {formatClinicDate(visit.created_at)}
@@ -125,12 +131,26 @@ export default async function PrintPage({
           label="Doctor"
           value={doctor ? `${doctor.full_name}${doctor.specialty ? ` — ${doctor.specialty}` : ""}` : null}
         />
-        {show.vitals && <Row label="Nurse" value={nurse?.full_name ?? null} />}
+      </section>
+
+      {/* Who handled the visit. Cumulative like everything else on this sheet:
+          the reception slip names the desk, the nurse slip adds whoever took
+          the vitals. Someone reading a printed record months later needs to
+          know who to ask, and a code alone does not tell them. */}
+      <section className="mt-5 border-t border-hairline pt-4">
+        <h2 className="text-[10px] uppercase tracking-wider text-accent">
+          Handled by
+        </h2>
+        <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <Row label="Reception" value={receptionist?.full_name ?? null} />
+          {show.vitals && <Row label="Nurse" value={nurse?.full_name ?? null} />}
+          {show.clinical && <Row label="Doctor" value={doctor?.full_name ?? null} />}
+        </div>
       </section>
 
       {visit.chief_complaint && (
-        <section className="mt-6 border-t border-line pt-4">
-          <h2 className="text-[10px] uppercase tracking-wider text-rose">
+        <section className="mt-6 border-t border-hairline pt-4">
+          <h2 className="text-[10px] uppercase tracking-wider text-accent">
             Reason for visit
           </h2>
           <p className="mt-1 whitespace-pre-wrap text-sm">{visit.chief_complaint}</p>
@@ -138,7 +158,7 @@ export default async function PrintPage({
       )}
 
       {show.vitals && (
-        <section className="mt-6 grid grid-cols-3 gap-4 border-y border-line py-4 sm:grid-cols-6">
+        <section className="mt-6 grid grid-cols-3 gap-4 border-y border-hairline py-4 sm:grid-cols-6">
           <Row label="Height" value={visit.height_cm ? `${visit.height_cm} cm` : null} />
           <Row label="Weight" value={visit.weight_kg ? `${visit.weight_kg} kg` : null} />
           <Row label="BP" value={visit.blood_pressure} />
@@ -150,7 +170,7 @@ export default async function PrintPage({
 
       {show.vitals && visit.nurse_notes && (
         <section className="mt-5">
-          <h2 className="text-[10px] uppercase tracking-wider text-rose">Nurse notes</h2>
+          <h2 className="text-[10px] uppercase tracking-wider text-accent">Nurse notes</h2>
           <p className="mt-1 whitespace-pre-wrap text-sm">{visit.nurse_notes}</p>
         </section>
       )}
@@ -159,19 +179,19 @@ export default async function PrintPage({
         <section className="mt-6 space-y-5">
           {visit.diagnosis && (
             <div>
-              <h2 className="text-[10px] uppercase tracking-wider text-rose">Diagnosis</h2>
+              <h2 className="text-[10px] uppercase tracking-wider text-accent">Diagnosis</h2>
               <p className="mt-1 whitespace-pre-wrap text-sm">{visit.diagnosis}</p>
             </div>
           )}
           {visit.prescription && (
             <div>
-              <h2 className="text-[10px] uppercase tracking-wider text-rose">Prescription</h2>
+              <h2 className="text-[10px] uppercase tracking-wider text-accent">Prescription</h2>
               <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{visit.prescription}</p>
             </div>
           )}
           {visit.advice && (
             <div>
-              <h2 className="text-[10px] uppercase tracking-wider text-rose">Advice</h2>
+              <h2 className="text-[10px] uppercase tracking-wider text-accent">Advice</h2>
               <p className="mt-1 whitespace-pre-wrap text-sm">{visit.advice}</p>
             </div>
           )}
@@ -182,14 +202,14 @@ export default async function PrintPage({
       )}
 
       {show.timeline && entries.length > 0 && (
-        <section className="mt-6 border-t border-line pt-4">
-          <h2 className="text-[10px] uppercase tracking-wider text-rose">History</h2>
+        <section className="mt-6 border-t border-hairline pt-4">
+          <h2 className="text-[10px] uppercase tracking-wider text-accent">History</h2>
           <div className="mt-3 space-y-4">
             {entries.map((e) => (
               <div key={e.id} className="break-inside-avoid">
-                <div className="font-serif italic text-sage">{e.title}</div>
-                <div className="text-[11px] text-ink-soft">
-                  {e.type} · {formatClinicDate(e.created_at)}
+                <div className="font-semibold italic text-primary">{e.title}</div>
+                <div className="text-[11px] text-muted">
+                  {ENTRY_TYPE_LABEL[e.type] ?? e.type} · {formatClinicDate(e.created_at)}
                 </div>
                 {e.body && <p className="mt-1 whitespace-pre-wrap text-sm">{e.body}</p>}
               </div>
@@ -198,10 +218,10 @@ export default async function PrintPage({
         </section>
       )}
 
-      <footer className="mt-16 flex items-end justify-between text-xs text-ink-soft">
+      <footer className="mt-16 flex items-end justify-between text-xs text-muted">
         <div>Lumen &amp; Leaf Skin &amp; Body Studio</div>
         {show.clinical && (
-          <div className="w-52 border-t border-ink pt-1 text-center">
+          <div className="w-52 border-t border-fg pt-1 text-center">
             Doctor&rsquo;s signature
           </div>
         )}

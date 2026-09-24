@@ -16,7 +16,8 @@ export default async function NurseVisitPage({
   const { data: visit } = await supabase
     .from("visits")
     .select(
-      `id, visit_code, visit_type, chief_complaint, created_at, status, doctor_id,
+      `id, visit_code, visit_type, chief_complaint, created_at, status,
+       doctor_id, receptionist_id,
        patients(full_name, patient_code, phone, age, gender)`,
     )
     .eq("id", visitId)
@@ -24,13 +25,23 @@ export default async function NurseVisitPage({
 
   if (!visit) notFound();
 
-  const { data: doctor } = visit.doctor_id
+  // Names come from the directory view — public.staff is owner-only, so
+  // embedding it here would leave every line blank.
+  const staffIds = [visit.doctor_id, visit.receptionist_id].filter(
+    Boolean,
+  ) as string[];
+  const { data: staffRows } = staffIds.length
     ? await supabase
         .from("staff_directory")
-        .select("full_name, specialty")
-        .eq("id", visit.doctor_id)
-        .maybeSingle()
-    : { data: null };
+        .select("id, full_name, specialty")
+        .in("id", staffIds)
+    : { data: [] };
+
+  const byId = new Map((staffRows ?? []).map((s) => [s.id, s]));
+  const doctor = visit.doctor_id ? byId.get(visit.doctor_id) ?? null : null;
+  const receptionist = visit.receptionist_id
+    ? byId.get(visit.receptionist_id) ?? null
+    : null;
 
   // Opening the patient is the moment the alert stops being useful.
   await markVisitRead(visitId);
@@ -41,13 +52,13 @@ export default async function NurseVisitPage({
   return (
     <div className="space-y-6">
       <div className="no-print flex items-center justify-between">
-        <Link href="/super-admin/nurse" className="text-sm text-sage underline underline-offset-2">
+        <Link href="/super-admin/nurse" className="text-sm font-bold text-primary underline-offset-4 transition-ui hover:underline">
           ← Back to queue
         </Link>
         <Link
           href={`/super-admin/print/${visit.id}?scope=nurse`}
           target="_blank"
-          className="border border-sage px-5 py-2 text-xs font-medium text-sage hover:bg-ivory-dim rounded-card"
+          className="inline-flex items-center gap-2 rounded-control border border-hairline bg-surface px-4 py-2 text-xs font-bold text-fg transition-ui hover:border-primary hover:bg-primary-soft hover:text-primary"
         >
           Print
         </Link>
@@ -60,14 +71,13 @@ export default async function NurseVisitPage({
           chief_complaint: visit.chief_complaint,
           created_at: visit.created_at,
           patient: patient ?? null,
-          doctorName: doctor
-            ? `${doctor.full_name}${doctor.specialty ? ` — ${doctor.specialty}` : ""}`
-            : null,
+          receptionistName: receptionist?.full_name ?? null,
+          doctorName: doctor?.full_name ?? null,
         }}
       />
 
       {alreadyDone ? (
-        <p className="border border-line bg-paper px-8 py-7 text-sm text-ink-soft rounded-card">
+        <p className="border border-hairline bg-surface px-8 py-7 text-sm text-muted rounded-card">
           Vitals for this visit have already been recorded and the patient has
           moved on to the doctor.
         </p>

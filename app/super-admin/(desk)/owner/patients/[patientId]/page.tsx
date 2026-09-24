@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ENTRY_TYPE_LABEL, Person } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { formatClinicDate, formatClinicTime } from "@/lib/clinic";
 import { createClient } from "@/lib/supabase/server";
@@ -13,19 +14,34 @@ const STATUS_LABEL: Record<string, string> = {
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <span className="block text-[11px] uppercase tracking-wider text-ink-soft">
+      <span className="block text-[11px] font-bold uppercase tracking-wider text-muted">
         {label}
       </span>
-      <span className="text-sm text-ink">{value || "—"}</span>
+      <span className="mt-0.5 block text-sm font-semibold text-fg">
+        {value || "—"}
+      </span>
     </div>
   );
 }
 
-function Handler({ role, name }: { role: string; name: string | null }) {
+function Handler({
+  label,
+  name,
+  role,
+}: {
+  label: string;
+  name: string | null;
+  role: "receptionist" | "nurse" | "doctor";
+}) {
   return (
-    <span className="text-xs text-ink-soft">
-      {role} <span className="text-ink">{name ?? "—"}</span>
-    </span>
+    <div>
+      <span className="block text-[11px] font-bold uppercase tracking-wider text-muted">
+        {label}
+      </span>
+      <span className="mt-1 block text-sm">
+        <Person name={name} role={role} />
+      </span>
+    </div>
   );
 }
 
@@ -77,18 +93,18 @@ export default async function OwnerPatientPage({
   const one = <T,>(x: T | T[] | null) => (Array.isArray(x) ? (x[0] ?? null) : x);
 
   return (
-    <div className="space-y-6">
+    <div className="animate-rise space-y-6">
       <Link
         href="/super-admin/owner"
-        className="no-print inline-block text-sm text-sage underline underline-offset-2"
+        className="no-print inline-block text-sm font-bold text-primary underline-offset-4 transition-ui hover:underline"
       >
         ← Back to search
       </Link>
 
-      <section className="border border-line bg-paper px-8 py-7 rounded-card">
+      <section className="rounded-card border border-hairline bg-surface px-5 py-5 shadow-card sm:px-7 sm:py-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h1 className="font-serif text-2xl">{patient.full_name}</h1>
-          <span className="text-xs text-ink-soft">
+          <h1 className="text-2xl font-extrabold">{patient.full_name}</h1>
+          <span className="text-xs text-muted">
             {patient.patient_code} · registered {formatClinicDate(patient.created_at)}
           </span>
         </div>
@@ -112,20 +128,20 @@ export default async function OwnerPatientPage({
         const visitEntries = entriesByVisit.get(v.id) ?? [];
 
         return (
-          <section key={v.id} className="border border-line bg-paper px-8 py-7 rounded-card">
+          <section key={v.id} className="rounded-card border border-hairline bg-surface px-5 py-5 shadow-card sm:px-7 sm:py-6">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="font-serif text-lg">
+              <h2 className="text-base font-extrabold">
                 {formatClinicDate(v.created_at)}
-                <span className="ml-3 text-xs text-ink-soft">{v.visit_code}</span>
+                <span className="ml-3 text-xs text-muted">{v.visit_code}</span>
               </h2>
               <div className="flex items-baseline gap-4">
-                <span className="text-xs text-ink-soft">
+                <span className="text-xs text-muted">
                   {STATUS_LABEL[v.status] ?? v.status}
                 </span>
                 <Link
                   href={`/super-admin/print/${v.id}?scope=full`}
                   target="_blank"
-                  className="no-print text-xs text-sage underline underline-offset-2"
+                  className="no-print text-xs font-bold text-primary underline-offset-4 transition-ui hover:underline"
                 >
                   Print
                 </Link>
@@ -133,20 +149,21 @@ export default async function OwnerPatientPage({
             </div>
 
             {/* Who handled this visit, and how long each stage took. */}
-            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 border-y border-line py-3">
-              <Handler role="Reception" name={rec?.full_name ?? null} />
-              <Handler role="Nurse" name={nur?.full_name ?? null} />
+            <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-y border-hairline py-4">
               <Handler
-                role="Doctor"
-                name={
-                  doc
-                    ? `${doc.full_name}${v.doctor_requested ? " (requested)" : " (auto)"}`
-                    : null
-                }
+                label="Checked in by"
+                name={rec?.full_name ?? null}
+                role="receptionist"
+              />
+              <Handler label="Vitals by" name={nur?.full_name ?? null} role="nurse" />
+              <Handler
+                label={`Doctor${doc ? (v.doctor_requested ? " · requested" : " · auto") : ""}`}
+                name={doc?.full_name ?? null}
+                role="doctor"
               />
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-x-6 text-[11px] text-ink-soft">
+            <div className="mt-3 flex flex-wrap gap-x-6 text-[11px] text-muted">
               <span>in {formatClinicTime(v.created_at)}</span>
               {v.vitals_at && <span>vitals {formatClinicTime(v.vitals_at)}</span>}
               {v.completed_at && <span>done {formatClinicTime(v.completed_at)}</span>}
@@ -168,10 +185,10 @@ export default async function OwnerPatientPage({
             )}
 
             {(v.diagnosis || v.prescription || v.advice) && (
-              <div className="mt-5 space-y-4 border-t border-line pt-4">
+              <div className="mt-5 space-y-4 border-t border-hairline pt-4">
                 {v.diagnosis && (
                   <div>
-                    <span className="block text-[11px] uppercase tracking-wider text-rose">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-accent">
                       Diagnosis
                     </span>
                     <p className="mt-1 whitespace-pre-wrap text-sm">{v.diagnosis}</p>
@@ -179,7 +196,7 @@ export default async function OwnerPatientPage({
                 )}
                 {v.prescription && (
                   <div>
-                    <span className="block text-[11px] uppercase tracking-wider text-rose">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-accent">
                       Prescription
                     </span>
                     <p className="mt-1 whitespace-pre-wrap text-sm">{v.prescription}</p>
@@ -187,7 +204,7 @@ export default async function OwnerPatientPage({
                 )}
                 {v.advice && (
                   <div>
-                    <span className="block text-[11px] uppercase tracking-wider text-rose">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-accent">
                       Advice
                     </span>
                     <p className="mt-1 whitespace-pre-wrap text-sm">{v.advice}</p>
@@ -200,28 +217,28 @@ export default async function OwnerPatientPage({
             )}
 
             {visitEntries.length > 0 && (
-              <ul className="mt-5 space-y-3 border-t border-line pt-4">
+              <ul className="mt-5 space-y-3 border-t border-hairline pt-4">
                 {visitEntries.map((e) => {
                   const author = one(e.author) as { full_name: string } | null;
                   return (
-                    <li key={e.id} className="border-l-2 border-line pl-4">
+                    <li key={e.id} className="border-l-2 border-hairline pl-4">
                       <div className="flex flex-wrap items-baseline gap-3">
-                        <span className="rounded-full bg-ivory-dim px-2 py-0.5 text-[11px] text-ink-soft">
-                          {e.type}
+                        <span className="rounded-full bg-subtle px-2.5 py-1 text-[11px] font-bold text-muted">
+                          {ENTRY_TYPE_LABEL[e.type] ?? e.type}
                         </span>
                         <span className="text-sm">{e.title}</span>
-                        <span className="text-[11px] text-ink-soft">
+                        <span className="text-[11px] text-muted">
                           {author?.full_name ?? "—"} ·{" "}
                           {formatClinicDate(e.created_at)}
                         </span>
                       </div>
                       {e.body && (
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-ink-soft">
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-muted">
                           {e.body}
                         </p>
                       )}
                       {e.file_name && (
-                        <span className="mt-1 block text-[11px] text-ink-soft">
+                        <span className="mt-1 block text-[11px] text-muted">
                           attachment: {e.file_name}
                         </span>
                       )}

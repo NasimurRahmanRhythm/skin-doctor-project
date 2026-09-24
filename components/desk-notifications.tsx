@@ -147,7 +147,7 @@ export default function DeskNotifications({ staffId, basePath, initial }: Props)
           }
           className={`h-2 w-2 rounded-full ${
             live === "live"
-              ? "bg-sage"
+              ? "bg-primary"
               : live === "offline"
                 ? "bg-err"
                 : "bg-ink-soft"
@@ -156,33 +156,33 @@ export default function DeskNotifications({ staffId, basePath, initial }: Props)
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="relative text-sm text-ink-soft hover:text-ink"
+          className="relative text-sm text-muted hover:text-fg"
         >
           Alerts
           {items.length > 0 && (
-            <span className="ml-2 rounded-full bg-rose px-2 py-0.5 text-[11px] text-paper">
+            <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[11px] text-on-primary">
               {items.length}
             </span>
           )}
         </button>
 
         {open && (
-          <div className="absolute right-0 top-8 z-20 w-80 border border-line bg-paper shadow-lg rounded-card">
+          <div className="absolute right-0 top-8 z-20 w-80 border border-hairline bg-surface shadow-lg rounded-card">
             {items.length === 0 ? (
-              <p className="px-4 py-5 text-sm text-ink-soft">Nothing waiting.</p>
+              <p className="px-4 py-5 text-sm text-muted">Nothing waiting.</p>
             ) : (
               <>
-                <ul className="max-h-80 divide-y divide-line overflow-y-auto">
+                <ul className="max-h-80 divide-y divide-hairline overflow-y-auto">
                   {items.map((n) => (
                     <li key={n.id}>
                       <Link
                         href={n.visit_id ? `${basePath}/${n.visit_id}` : basePath}
                         onClick={() => setOpen(false)}
-                        className="block px-4 py-3 hover:bg-ivory-dim"
+                        className="block px-4 py-3 hover:bg-subtle"
                       >
-                        <span className="block text-sm text-ink">{n.title}</span>
+                        <span className="block text-sm text-fg">{n.title}</span>
                         {n.body && (
-                          <span className="block text-xs text-ink-soft">{n.body}</span>
+                          <span className="block text-xs text-muted">{n.body}</span>
                         )}
                       </Link>
                     </li>
@@ -194,9 +194,9 @@ export default function DeskNotifications({ staffId, basePath, initial }: Props)
                     setOpen(false);
                     router.refresh();
                   }}
-                  className="border-t border-line px-4 py-2 text-right"
+                  className="border-t border-hairline px-4 py-2 text-right"
                 >
-                  <button type="submit" className="text-xs text-sage underline">
+                  <button type="submit" className="text-xs text-primary underline">
                     Mark all read
                   </button>
                 </form>
@@ -207,7 +207,7 @@ export default function DeskNotifications({ staffId, basePath, initial }: Props)
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 border border-sage bg-sage-deep px-5 py-3 text-sm text-ivory shadow-lg rounded-card">
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 border border-primary bg-primary-hover px-5 py-3 text-sm text-on-primary shadow-lg rounded-card">
           {toast}
         </div>
       )}

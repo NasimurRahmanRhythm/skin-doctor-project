@@ -45,6 +45,7 @@ const reception = await signInAs("rhythm4538+reception@gmail.com");
 const blob = new Blob(["storage probe"], { type: "text/plain" });
 const DOC_PATH = "probe/doctor-test.txt";
 const REC_PATH = "probe/reception-test.txt";
+const OVERSIZE_PATH = "probe/too-big.pdf";
 
 console.log("\nClinical staff can attach and read files");
 {
@@ -63,8 +64,10 @@ console.log("\nClinical staff can attach and read files");
 
 console.log("\nReception is kept out of clinical files");
 {
+  // Reception may write under visits/<their own visit>/ and nowhere else, so
+  // this loose path must still be refused.
   const { error } = await reception.storage.from("patient-files").upload(REC_PATH, blob, { upsert: true });
-  if (error) pass("receptionist blocked from uploading");
+  if (error) pass("receptionist blocked from uploading outside their own visit");
   else fail("receptionist COULD upload a clinical file");
 
   const { error: rErr } = await reception.storage.from("patient-files").download(DOC_PATH);
@@ -89,7 +92,32 @@ console.log("\nBucket is private");
   }
 }
 
-await admin.storage.from("patient-files").remove([DOC_PATH, REC_PATH]);
+console.log("\nUpload ceiling");
+{
+  const MAX = 10 * 1024 * 1024;
+  const { data: bucket, error } = await admin.storage.getBucket("patient-files");
+
+  if (error) {
+    fail("could not read the bucket settings", error.message);
+  } else if (bucket.file_size_limit === MAX) {
+    pass("bucket itself enforces 10 MB");
+  } else {
+    fail("bucket size limit is not 10 MB", String(bucket.file_size_limit ?? "unset"));
+  }
+
+  // The forms check this too, but only storage can stop a request that never
+  // went through a form. Sent as a doctor, whose path policy is unrestricted,
+  // so size is the only thing that can refuse it.
+  const big = new Blob([new Uint8Array(MAX + 1024 * 1024)], { type: "application/pdf" });
+  const { error: bigErr } = await doctor.storage
+    .from("patient-files")
+    .upload(OVERSIZE_PATH, big, { upsert: true, contentType: "application/pdf" });
+
+  if (bigErr) pass(`11 MB upload refused (${bigErr.message})`);
+  else fail("an 11 MB file was accepted", "the ceiling is not being enforced");
+}
+
+await admin.storage.from("patient-files").remove([DOC_PATH, REC_PATH, OVERSIZE_PATH]);
 console.log("  ..    probe files removed");
 
 console.log(failed === 0 ? "\nAll storage checks passed.\n" : `\n${failed} storage check(s) FAILED.\n`);

@@ -1,7 +1,16 @@
 import Link from "next/link";
+import { card, cardPad, Code, EmptyState, SectionHead } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { formatClinicTime } from "@/lib/clinic";
 import { createClient } from "@/lib/supabase/server";
+
+/** Rough wait, so the desk can see who has been sitting longest. */
+function waitedFor(iso: string) {
+  const mins = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  return `${h}h ${mins % 60}m`;
+}
 
 export default async function NurseQueuePage({
   searchParams,
@@ -10,7 +19,6 @@ export default async function NurseQueuePage({
   const sp = await searchParams;
   const supabase = await createClient();
 
-  // RLS shows the nurse anything awaiting vitals, plus what they already took.
   const { data: waiting } = await supabase
     .from("visits")
     .select(
@@ -22,56 +30,70 @@ export default async function NurseQueuePage({
   const queue = waiting ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="animate-rise space-y-5">
       {sp.done === "1" && (
-        <p className="border border-sage bg-ivory-dim px-5 py-3 text-sm text-sage-deep rounded-card">
+        <p className="rounded-card border border-ok/40 bg-ok/10 px-4 py-3 text-sm text-ok">
           Vitals saved — the patient is now with their doctor.
         </p>
       )}
 
-      <section className="border border-line bg-paper px-8 py-7 rounded-card">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h1 className="font-serif text-xl">Awaiting vitals</h1>
-          <span className="text-sm text-ink-soft">
-            {queue.length} waiting
-          </span>
-        </div>
-        <p className="mt-1 text-sm text-ink-soft">
-          Oldest first. New check-ins appear here on their own.
-        </p>
+      <section className={`${card} ${cardPad}`}>
+        <SectionHead
+          title="Awaiting vitals"
+          hint="Oldest first. New check-ins arrive on their own."
+          trailing={
+            <span className="rounded-full bg-subtle px-3 py-1 text-xs font-medium text-muted">
+              {queue.length} waiting
+            </span>
+          }
+        />
 
         {queue.length === 0 ? (
-          <p className="mt-6 text-sm text-ink-soft">
-            Nobody is waiting on vitals right now.
-          </p>
+          <div className="mt-5">
+            <EmptyState
+              title="Nobody is waiting"
+              hint="Patients appear here the moment reception checks them in — you do not need to refresh."
+            />
+          </div>
         ) : (
-          <ul className="mt-5 divide-y divide-line">
+          <ul className="mt-5 space-y-2.5">
             {queue.map((v) => {
               const p = Array.isArray(v.patients) ? v.patients[0] : v.patients;
               return (
-                <li key={v.id} className="py-4">
+                <li key={v.id}>
                   <Link
                     href={`/super-admin/nurse/${v.id}`}
-                    className="flex flex-wrap items-baseline justify-between gap-2 hover:opacity-75"
+                    className="group flex flex-col gap-2 rounded-control border border-hairline bg-surface px-4 py-3.5 transition-ui hover:-translate-y-px hover:border-primary/60 hover:bg-primary-soft/50 hover:shadow-card sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                   >
-                    <div>
-                      <span className="font-serif text-lg">
+                    <div className="min-w-0">
+                      <span className="font-bold transition-ui group-hover:text-primary">
                         {p?.full_name ?? "—"}
                       </span>
-                      <span className="ml-3 text-xs text-ink-soft">
-                        {v.visit_code} · {p?.patient_code} ·{" "}
-                        {p?.age != null ? `age ${p.age}` : "age —"} ·{" "}
+                      {p?.age != null && (
+                        <span className="ml-2 text-xs text-muted">{p.age}y</span>
+                      )}
+                      <span className="mt-1 block text-xs text-muted">
+                        <Code>{v.visit_code}</Code>
+                        <span className="mx-1.5">·</span>
+                        <Code>{p?.patient_code}</Code>
+                        <span className="mx-1.5">·</span>
                         {v.visit_type}
                       </span>
                       {v.chief_complaint && (
-                        <p className="mt-1 max-w-xl text-sm text-ink-soft">
+                        <p className="mt-1.5 line-clamp-2 max-w-xl text-sm text-muted">
                           {v.chief_complaint}
                         </p>
                       )}
                     </div>
-                    <span className="text-xs text-ink-soft">
-                      waiting since {formatClinicTime(v.created_at)}
-                    </span>
+
+                    <div className="shrink-0 text-left sm:text-right">
+                      <span className="block text-sm font-medium tabular">
+                        {waitedFor(v.created_at)}
+                      </span>
+                      <span className="block text-xs text-muted">
+                        since {formatClinicTime(v.created_at)}
+                      </span>
+                    </div>
                   </Link>
                 </li>
               );

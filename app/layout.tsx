@@ -1,29 +1,37 @@
 import type { Metadata } from "next";
-import { Fraunces, Work_Sans } from "next/font/google";
+import { JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+/**
+ * Manrope carries the whole console. It holds its shape at 11px in a table
+ * header and still has real weight at 800 for a heading, which is what lets
+ * one family do all the hierarchy work — mixing display faces reads as
+ * marketing, not as a tool.
+ */
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
-const workSans = Work_Sans({
-  variable: "--font-work-sans",
+/** Record codes, vitals and prescriptions, where 0 vs O has to be obvious. */
+const monoCode = JetBrains_Mono({
+  variable: "--font-mono-code",
   subsets: ["latin"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Lumen & Leaf",
-  description: "Skin & Body Studio — patient records",
+  description: "Skin & Body Studio — clinic console",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${workSans.variable} h-full antialiased`}
+      className={`${manrope.variable} ${monoCode.variable} h-full antialiased`}
     >
       <body className="font-sans min-h-full flex flex-col">{children}</body>
     </html>

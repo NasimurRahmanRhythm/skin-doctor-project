@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/uploads";
 
 export type PatientMatch = {
   id: string;
@@ -68,8 +69,74 @@ export type CheckInState = {
     wasRequested: boolean;
     returning: boolean;
     visitId: string;
+    attachments: string[];
+    /** Set when the visit was created but a file did not make it up. */
+    fileWarning?: string;
   };
 };
+
+/** What a patient can hand over the desk: a scan, a photo, or a PDF report. */
+const MAX_FILES = 5;
+const ACCEPTED = /^(application\/pdf|image\/(jpeg|png|webp|heic|heif|gif))$/i;
+
+/**
+ * Stores whatever the patient brought in, as `intake` entries on the visit.
+ *
+ * Deliberately runs after the visit row exists and never unwinds it: a scanner
+ * that fails is not a reason to un-check-in a patient who is already standing
+ * at the desk, and the nurse has been notified by then anyway. Any failure is
+ * reported back as a warning so the desk can retry from the doctor's page.
+ */
+async function attachIntakeFiles(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  visitId: string,
+  staffId: string,
+  files: File[],
+): Promise<{ names: string[]; warning?: string }> {
+  const names: string[] = [];
+
+  for (const file of files) {
+    if (file.size === 0) continue;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return {
+        names,
+        warning: `"${file.name}" is over ${MAX_UPLOAD_LABEL} and was not attached.`,
+      };
+    }
+    if (!ACCEPTED.test(file.type)) {
+      return { names, warning: `"${file.name}" is not a PDF or an image.` };
+    }
+
+    const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-80);
+    const path = `visits/${visitId}/${crypto.randomUUID()}-${safeName}`;
+
+    const { error: upErr } = await supabase.storage
+      .from("patient-files")
+      .upload(path, file, { contentType: file.type || undefined });
+
+    if (upErr) return { names, warning: `Could not upload "${file.name}": ${upErr.message}` };
+
+    const { error: rowErr } = await supabase.from("visit_entries").insert({
+      visit_id: visitId,
+      type: "intake",
+      title: file.name,
+      file_path: path,
+      file_name: file.name,
+      file_type: file.type || null,
+      author_id: staffId,
+    });
+
+    if (rowErr) {
+      // A file nothing points at is invisible to every desk, so clean it up.
+      await supabase.storage.from("patient-files").remove([path]);
+      return { names, warning: `Could not attach "${file.name}": ${rowErr.message}` };
+    }
+
+    names.push(file.name);
+  }
+
+  return { names };
+}
 
 export async function checkIn(
   _prev: CheckInState,
@@ -91,6 +158,15 @@ export async function checkIn(
     return { error: parsed.error.issues[0]?.message ?? "Check the form." };
   }
   const input = parsed.data;
+
+  const files = formData
+    .getAll("files")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+
+  if (files.length > MAX_FILES) {
+    return { error: `Attach at most ${MAX_FILES} files.` };
+  }
+
   const supabase = await createClient();
 
   // New vs returning is decided by the phone number on record, not by what the
@@ -162,6 +238,10 @@ export async function checkIn(
     return { error: visitError?.message ?? "Could not create the visit." };
   }
 
+  const attached = files.length
+    ? await attachIntakeFiles(supabase, visit.id, staff.id, files)
+    : { names: [] as string[] };
+
   const { data: doctor } = await supabase
     .from("staff_directory")
     .select("full_name")
@@ -179,6 +259,8 @@ export async function checkIn(
       doctorName: doctor?.full_name ?? "Assigned doctor",
       wasRequested,
       returning: Boolean(existing),
+      attachments: attached.names,
+      fileWarning: attached.warning,
     },
   };
 }

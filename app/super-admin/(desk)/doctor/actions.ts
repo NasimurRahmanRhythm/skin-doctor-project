@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/uploads";
 
 export type ConsultState = { error?: string; saved?: boolean };
 
@@ -59,8 +60,6 @@ export async function saveConsultation(
 
 export type EntryState = { error?: string; saved?: boolean };
 
-const MAX_FILE_BYTES = 8 * 1024 * 1024;
-
 export async function addEntry(
   _prev: EntryState,
   formData: FormData,
@@ -85,8 +84,10 @@ export async function addEntry(
   let fileType: string | null = null;
 
   if (file instanceof File && file.size > 0) {
-    if (file.size > MAX_FILE_BYTES) {
-      return { error: "That file is over 8 MB. Compress it and try again." };
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return {
+        error: `That file is over ${MAX_UPLOAD_LABEL}. Compress it and try again.`,
+      };
     }
     // Path is keyed by visit so the owner can find everything for a patient,
     // and the random prefix stops two uploads of "report.pdf" colliding.

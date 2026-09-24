@@ -14,7 +14,8 @@
     "verify:storage": "node --env-file=.env.local scripts/verify-storage.mjs",
     "verify:handoff": "node --env-file=.env.local scripts/verify-handoff.mjs",
     "verify:bundle": "node --env-file=.env.local scripts/verify-bundle.mjs",
-    "verify:owner": "node --env-file=.env.local scripts/verify-owner.mjs"
+    "verify:owner": "node --env-file=.env.local scripts/verify-owner.mjs",
+    "verify:pagination": "node --env-file=.env.local scripts/verify-pagination.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

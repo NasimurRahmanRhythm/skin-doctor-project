@@ -244,7 +244,107 @@ console.log("\nLoad balancing for 'no preference'");
   else fail("one doctor is carrying the queue", shown);
 }
 
+console.log("\nIntake attachments");
+{
+  // A tiny but genuinely valid PDF, so the content type is not a lie.
+  const pdf = new Blob(
+    ["%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n"],
+    { type: "application/pdf" },
+  );
+  const path = `visits/${firstVisit.id}/${crypto.randomUUID()}-probe.pdf`;
+  made.files = [path];
+
+  const { error: upErr } = await reception.storage
+    .from("patient-files")
+    .upload(path, pdf, { contentType: "application/pdf" });
+
+  if (upErr) {
+    fail("receptionist cannot upload an intake file", upErr.message);
+  } else {
+    pass("receptionist uploaded a PDF to their own visit");
+
+    const { error: rowErr } = await reception.from("visit_entries").insert({
+      visit_id: firstVisit.id,
+      type: "intake",
+      title: "probe.pdf",
+      file_path: path,
+      file_name: "probe.pdf",
+      file_type: "application/pdf",
+      author_id: me.id,
+    });
+    if (rowErr) fail("receptionist cannot record the intake entry", rowErr.message);
+    else pass("intake entry recorded against the visit");
+  }
+
+  // Writing into someone else's visit folder must be refused. An invented id
+  // is enough: no visit of that id has this receptionist on it.
+  const { error: foreignErr } = await reception.storage
+    .from("patient-files")
+    .upload(`visits/${crypto.randomUUID()}/sneak.pdf`, pdf, {
+      contentType: "application/pdf",
+    });
+  if (foreignErr) pass("upload into a foreign visit folder refused");
+  else fail("receptionist wrote into a visit that is not theirs");
+
+  // The whole point of scoping the read policy: clinical notes stay unreadable
+  // even on a visit this receptionist checked in.
+  const { data: docRow } = await admin
+    .from("staff")
+    .select("id")
+    .eq("email", "rhythm4538+dr.nabila@gmail.com")
+    .single();
+  const { data: clinical } = await admin
+    .from("visit_entries")
+    .insert({
+      visit_id: firstVisit.id,
+      type: "note",
+      title: "Doctor-only probe note",
+      body: "Should never be visible to the front desk.",
+      author_id: docRow.id,
+    })
+    .select("id")
+    .single();
+
+  const { data: seen } = await reception
+    .from("visit_entries")
+    .select("id, type, title")
+    .eq("visit_id", firstVisit.id);
+
+  const sawClinical = (seen ?? []).some((e) => e.id === clinical.id);
+  const sawOwn = (seen ?? []).some((e) => e.type === "intake");
+
+  if (sawClinical) fail("receptionist can read a clinical note");
+  else pass("clinical note stays hidden from the front desk");
+  if (sawOwn) pass("receptionist can read back their own attachment");
+  else fail("receptionist cannot see the file they just attached");
+
+  // The doctor on the visit must actually receive it — that is the feature.
+  const doctorClient = await signInAs("rhythm4538+dr.nabila@gmail.com");
+  const { data: visitRow } = await admin
+    .from("visits")
+    .select("doctor_id")
+    .eq("id", firstVisit.id)
+    .single();
+
+  if (visitRow.doctor_id !== docRow.id) {
+    // Assignment is load-based, so the probe visit may belong to someone else.
+    await admin.from("visits").update({ doctor_id: docRow.id }).eq("id", firstVisit.id);
+  }
+
+  const { data: docSees } = await doctorClient
+    .from("visit_entries")
+    .select("id, type, file_name")
+    .eq("visit_id", firstVisit.id);
+
+  if ((docSees ?? []).some((e) => e.type === "intake" && e.file_name === "probe.pdf")) {
+    pass("assigned doctor sees the reception attachment");
+  } else {
+    fail("assigned doctor cannot see the reception attachment");
+  }
+}
+
 // cleanup
+await admin.storage.from("patient-files").remove(made.files ?? []);
 await admin.from("visits").delete().in("id", made.visits);
 await admin.from("patients").delete().in("id", made.patients);
 console.log("  ..    probe rows cleaned up");

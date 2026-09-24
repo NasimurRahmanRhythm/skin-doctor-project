@@ -1,8 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
+import {
+  btnGhost,
+  btnPrimary,
+  btnQuiet,
+  card,
+  cardPad,
+  field as fieldBase,
+  fieldLabel as label,
+  SectionHead,
+} from "@/components/ui";
+import { compressImage, formatBytes } from "@/lib/compress-image";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/uploads";
 import {
   checkIn,
   lookupPatient,
@@ -12,9 +24,8 @@ import {
 
 type Doctor = { id: string; full_name: string; specialty: string | null };
 
-const field =
-  "mt-2 w-full border border-line bg-ivory px-4 py-3 text-sm text-ink outline-none focus:outline-2 focus:outline-sage rounded-card";
-const label = "block text-xs text-ink-soft";
+const field = `${fieldBase} mt-1.5`;
+const MAX_FILES = 5;
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -22,7 +33,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="border border-sage bg-sage px-6 py-3 text-sm font-medium text-paper transition-colors hover:bg-sage-deep disabled:opacity-50 rounded-card"
+      className={btnPrimary}
     >
       {pending ? "Saving…" : "Check in & send to nurse"}
     </button>
@@ -35,34 +46,128 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
   const [, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
 
+  // Name and age are held here rather than left uncontrolled, because the
+  // phone lookup has to fill them in after they have already rendered — and
+  // must never overwrite something the desk has typed.
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [picked, setPicked] = useState<{ name: string; size: number }[]>([]);
+  const [compressing, setCompressing] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+
   function onPhoneBlur(e: React.FocusEvent<HTMLInputElement>) {
     const phone = e.target.value;
-    startTransition(async () => setMatch(await lookupPatient(phone)));
+    startTransition(async () => {
+      const found = await lookupPatient(phone);
+      setMatch(found);
+      if (!found) return;
+      setName((current) => (current.trim() ? current : found.full_name));
+      setAge((current) =>
+        current.trim() ? current : found.age != null ? String(found.age) : "",
+      );
+    });
+  }
+
+  /**
+   * A phone photo of a rash is 3–5 MB. Shrinking it here, before the upload,
+   * is what keeps the clinic inside its 1 GB of storage. PDFs pass through
+   * untouched — a lab report must not be run through a canvas.
+   *
+   * Oversize files are dropped now rather than at submit: the desk finds out
+   * while the patient is still standing there, not after a failed save.
+   */
+  async function onFilesPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const chosen = Array.from(e.target.files ?? []);
+    setFileError(null);
+
+    if (chosen.length === 0) {
+      setPicked([]);
+      return;
+    }
+    if (chosen.length > MAX_FILES) {
+      setFileError(`Attach at most ${MAX_FILES} files.`);
+      if (fileRef.current) fileRef.current.value = "";
+      setPicked([]);
+      return;
+    }
+
+    // Keep the files that fit and say which ones did not, rather than throwing
+    // the whole selection away over one bad scan.
+    const tooBig = chosen.filter((f) => f.size > MAX_UPLOAD_BYTES);
+    const usable = chosen.filter((f) => f.size <= MAX_UPLOAD_BYTES);
+
+    if (tooBig.length > 0) {
+      setFileError(
+        `${tooBig
+          .map((f) => `"${f.name}" (${formatBytes(f.size)})`)
+          .join(", ")} — over the ${MAX_UPLOAD_LABEL} limit, not attached.`,
+      );
+    }
+    if (usable.length === 0) {
+      if (fileRef.current) fileRef.current.value = "";
+      setPicked([]);
+      return;
+    }
+
+    setCompressing(true);
+    const shrunk = await Promise.all(usable.map((f) => compressImage(f)));
+    setCompressing(false);
+
+    writeBack(shrunk);
+  }
+
+  /** Writes a list back into the input, so the form submits exactly these. */
+  function writeBack(files: File[]) {
+    if (!fileRef.current) return;
+    const dt = new DataTransfer();
+    for (const f of files) dt.items.add(f);
+    fileRef.current.files = dt.files;
+    setPicked(files.map((f) => ({ name: f.name, size: f.size })));
+  }
+
+  function removeFile(index: number) {
+    const current = Array.from(fileRef.current?.files ?? []);
+    writeBack(current.filter((_, i) => i !== index));
   }
 
   if (state.success) {
     const s = state.success;
     return (
-      <div className="border border-line bg-paper px-8 py-10 text-center rounded-card">
-        <p className="font-serif italic text-rose">Checked in</p>
-        <h2 className="mt-1 font-serif text-2xl">Sent to the nurse</h2>
+      <div className={`${card} ${cardPad} text-center`}>
+        <p className="text-xs font-medium uppercase tracking-wider text-ok">Checked in</p>
+        <h2 className="mt-1 text-xl font-semibold">Sent to the nurse</h2>
 
-        <div className="my-6 inline-block border border-dashed border-line bg-ivory-dim px-8 py-4 font-serif text-3xl tracking-wide text-sage-deep rounded-card">
+        <div className="my-6 inline-block rounded-control border border-dashed border-primary/45 bg-primary/8 px-7 py-3.5 font-mono text-2xl font-semibold tracking-tight text-primary">
           {s.visitCode}
         </div>
 
-        <dl className="mx-auto max-w-sm space-y-1 text-sm text-ink-soft">
+        <dl className="mx-auto max-w-sm space-y-1 text-sm text-muted">
           <div>
             {s.patientName} · {s.patientCode}{" "}
-            <span className="text-ink">
+            <span className="text-fg">
               ({s.returning ? "returning" : "new"} patient)
             </span>
           </div>
           <div>
-            Doctor: <span className="text-ink">{s.doctorName}</span>{" "}
+            Doctor: <span className="text-fg">{s.doctorName}</span>{" "}
             {s.wasRequested ? "(requested)" : "(first available)"}
           </div>
+          {s.attachments.length > 0 && (
+            <div>
+              Attached:{" "}
+              <span className="text-fg">{s.attachments.join(", ")}</span>
+            </div>
+          )}
         </dl>
+
+        {s.fileWarning && (
+          <p className="mx-auto mt-5 max-w-sm rounded-control border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-sm text-warn">
+            {s.fileWarning} The check-in itself went through — do not check the
+            patient in again; the doctor can attach it instead.
+          </p>
+        )}
 
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <button
@@ -72,14 +177,14 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
               setFormKey((k) => k + 1);
               window.location.reload();
             }}
-            className="border border-sage bg-sage px-6 py-3 text-sm font-medium text-paper hover:bg-sage-deep rounded-card"
+            className={btnPrimary}
           >
             Check in another patient
           </button>
           <Link
             href={`/super-admin/print/${s.visitId}?scope=reception`}
             target="_blank"
-            className="border border-sage px-6 py-3 text-sm font-medium text-sage hover:bg-ivory-dim rounded-card"
+            className={btnGhost}
           >
             Print slip
           </Link>
@@ -92,14 +197,29 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
     <form
       key={formKey}
       action={action}
-      className="border border-line bg-paper px-8 py-8 rounded-card"
+      className={`${card} ${cardPad}`}
     >
-      <h2 className="font-serif text-xl">Patient check-in</h2>
-      <p className="mt-1 text-sm text-ink-soft">
-        Goes to the nurse for vitals, then on to the doctor.
-      </p>
+      <SectionHead
+        title="Patient check-in"
+        hint="Goes to the nurse for vitals, then on to the doctor."
+      />
 
-      <div className="mt-6 grid gap-5 sm:grid-cols-2">
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <label htmlFor="full_name" className={label}>
+            Patient name
+          </label>
+          <input
+            id="full_name"
+            name="full_name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Farhana Islam"
+            className={field}
+          />
+        </div>
+
         <div className="sm:col-span-2">
           <label htmlFor="phone" className={label}>
             Phone number
@@ -114,27 +234,13 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             className={field}
           />
           {match && (
-            <p className="mt-2 text-xs text-sage">
+            <p className="mt-1.5 rounded-control border border-primary/35 bg-primary/8 px-3 py-2 text-xs text-primary">
               Returning patient — {match.full_name} · {match.patient_code} ·{" "}
               {match.visitCount} previous{" "}
               {match.visitCount === 1 ? "visit" : "visits"}. Their history stays
               under the same code.
             </p>
           )}
-        </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor="full_name" className={label}>
-            Patient name
-          </label>
-          <input
-            id="full_name"
-            name="full_name"
-            required
-            defaultValue={match?.full_name ?? ""}
-            placeholder="Farhana Islam"
-            className={field}
-          />
         </div>
 
         <div>
@@ -147,7 +253,8 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             type="number"
             min={0}
             max={129}
-            defaultValue={match?.age ?? ""}
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
             placeholder="34"
             className={field}
           />
@@ -167,14 +274,14 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
 
         <div className="sm:col-span-2">
           <label htmlFor="address" className={label}>
-            Address <span className="text-ink-soft">(optional)</span>
+            Address <span className="text-muted">(optional)</span>
           </label>
           <input id="address" name="address" className={field} />
         </div>
 
         <div className="sm:col-span-2">
           <label htmlFor="chief_complaint" className={label}>
-            Reason for visit <span className="text-ink-soft">(optional)</span>
+            Reason for visit <span className="text-muted">(optional)</span>
           </label>
           <textarea
             id="chief_complaint"
@@ -183,6 +290,58 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             placeholder="Itchy rash on both forearms for two weeks"
             className={`${field} resize-y`}
           />
+        </div>
+
+        <div className="sm:col-span-2">
+          <label htmlFor="files" className={label}>
+            Documents the patient brought{" "}
+            <span className="text-muted">(optional)</span>
+          </label>
+          <input
+            ref={fileRef}
+            id="files"
+            name="files"
+            type="file"
+            multiple
+            accept="application/pdf,image/*"
+            onChange={onFilesPicked}
+            className={`${field} bg-surface file:mr-3 file:rounded-control file:border-0 file:bg-subtle file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-fg hover:file:bg-hairline`}
+          />
+
+          {compressing && (
+            <p className="mt-1.5 text-xs text-muted">Preparing files…</p>
+          )}
+
+          {!compressing && picked.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {picked.map((f, i) => (
+                <li
+                  key={`${f.name}-${i}`}
+                  className="flex items-center justify-between gap-3 rounded-control border border-hairline px-3 py-1.5 text-xs"
+                >
+                  <span className="truncate">
+                    {f.name}{" "}
+                    <span className="text-muted">{formatBytes(f.size)}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    className={btnQuiet}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {fileError && <p className="mt-1.5 text-xs text-danger">{fileError}</p>}
+
+          <p className="mt-1.5 text-xs text-muted">
+            Old prescriptions, lab reports or photos — PDF or image, up to{" "}
+            {MAX_FILES} files, {MAX_UPLOAD_LABEL} each. Photos are shrunk
+            before upload. The doctor sees them on this visit.
+          </p>
         </div>
 
         <div className="sm:col-span-2">
@@ -203,15 +362,15 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
               </option>
             ))}
           </select>
-          <p className="mt-2 text-xs text-ink-soft">
+          <p className="mt-2 text-xs text-muted">
             No preference goes to whichever doctor has the lightest queue today.
           </p>
         </div>
       </div>
 
-      {state.error && <p className="mt-5 text-sm text-err">{state.error}</p>}
+      {state.error && <p className="mt-4 text-sm text-danger">{state.error}</p>}
 
-      <div className="mt-7">
+      <div className="mt-6">
         <SubmitButton />
       </div>
     </form>

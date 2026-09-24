@@ -1,27 +1,66 @@
 import Link from "next/link";
+import {
+  btnGhost,
+  btnPrimary,
+  card,
+  cardPad,
+  Code,
+  EmptyState,
+  field,
+  Person,
+  SectionHead,
+  StatusPill,
+  tableEl,
+  tableWrap,
+  tdCell,
+  thCell,
+  trRow,
+} from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { clinicDayRange, clinicToday, formatClinicDate, formatClinicTime } from "@/lib/clinic";
 import { createClient } from "@/lib/supabase/server";
 
-const STATUS_LABEL: Record<string, string> = {
-  awaiting_vitals: "With nurse",
-  awaiting_doctor: "With doctor",
-  completed: "Completed",
-};
-
-function Stat({ label, value }: { label: string; value: string | number }) {
+/**
+ * A tile on the dark band. The dot carries the same colour the status pill
+ * uses further down the page, so "with nurse" is one idea in two places.
+ */
+function Stat({
+  label,
+  value,
+  dot,
+}: {
+  label: string;
+  value: string | number;
+  dot: string;
+}) {
   return (
-    <div className="bg-ivory-dim px-5 py-4 rounded-card">
-      <span className="block text-[11px] uppercase tracking-wider text-ink-soft">
+    <div className="rounded-control border border-white/15 bg-white/10 px-4 py-3.5 transition-ui hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/[0.16]">
+      <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-hero-fg/75">
+        <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden="true" />
         {label}
       </span>
-      <span className="font-serif text-xl">{value}</span>
+      <span className="mt-2 block text-3xl font-extrabold tabular leading-none">
+        {value}
+      </span>
     </div>
   );
 }
 
-const field =
-  "w-full border border-line bg-ivory px-4 py-2.5 text-sm text-ink outline-none focus:outline-2 focus:outline-sage rounded-card";
+const PER_PAGE = 30;
+
+/** Keeps the current search on the link when moving between pages. */
+function pageHref(
+  { q, from, to }: { q: string; from: string; to: string },
+  page: number,
+) {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  if (page > 1) params.set("page", String(page));
+  const qs = params.toString();
+  return qs ? `/super-admin/owner?${qs}` : "/super-admin/owner";
+}
 
 export default async function OwnerPage({
   searchParams,
@@ -33,32 +72,28 @@ export default async function OwnerPage({
   const from = typeof sp.from === "string" ? sp.from : "";
   const to = typeof sp.to === "string" ? sp.to : "";
 
+  const pageParam = Number(typeof sp.page === "string" ? sp.page : "1");
+  const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+  const offset = (page - 1) * PER_PAGE;
+
   const supabase = await createClient();
   const today = clinicDayRange();
 
   // ---- today's snapshot -------------------------------------------------
-  const [{ data: todayVisits }, { data: doctors }] = await Promise.all([
-    supabase
-      .from("visits")
-      .select("status, doctor_id")
-      .gte("created_at", today.start)
-      .lt("created_at", today.end),
-    supabase
-      .from("staff_directory")
-      .select("id, full_name")
-      .eq("role", "doctor")
-      .eq("is_active", true)
-      .order("full_name"),
-  ]);
+  const { data: todayVisits } = await supabase
+    .from("visits")
+    .select("status")
+    .gte("created_at", today.start)
+    .lt("created_at", today.end);
 
   const counts = { awaiting_vitals: 0, awaiting_doctor: 0, completed: 0 };
-  const perDoctor = new Map<string, number>();
   for (const v of todayVisits ?? []) {
     counts[v.status as keyof typeof counts]++;
-    if (v.doctor_id) perDoctor.set(v.doctor_id, (perDoctor.get(v.doctor_id) ?? 0) + 1);
   }
 
   // ---- search ------------------------------------------------------------
+  // count: "exact" makes Postgres report how many rows match the filters
+  // before the range is applied, which is what the page numbers need.
   let query = supabase
     .from("visits")
     .select(
@@ -67,9 +102,10 @@ export default async function OwnerPage({
        receptionist:receptionist_id(full_name),
        nurse:nurse_id(full_name),
        doctor:doctor_id(full_name)`,
+      { count: "exact" },
     )
     .order("created_at", { ascending: false })
-    .limit(100);
+    .range(offset, offset + PER_PAGE - 1);
 
   if (from) query = query.gte("created_at", clinicDayRange(from).start);
   if (to) query = query.lt("created_at", clinicDayRange(to).end);
@@ -89,51 +125,57 @@ export default async function OwnerPage({
       : query.ilike("visit_code", `%${q}%`);
   }
 
-  const { data: results } = await query;
+  const { data: results, count } = await query;
   const rows = results ?? [];
   const searching = Boolean(q || from || to);
 
+  const total = count ?? 0;
+  const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+  const firstShown = total === 0 ? 0 : offset + 1;
+  const lastShown = Math.min(offset + PER_PAGE, total);
+
   return (
     <div className="space-y-6">
-      <section className="border border-line bg-paper px-8 py-7 rounded-card">
-        <h1 className="font-serif text-xl">Today — {formatClinicDate(today.start)}</h1>
-        <div className="mt-5 grid gap-4 sm:grid-cols-4">
-          <Stat label="Checked in" value={(todayVisits ?? []).length} />
-          <Stat label="With nurse" value={counts.awaiting_vitals} />
-          <Stat label="With doctor" value={counts.awaiting_doctor} />
-          <Stat label="Completed" value={counts.completed} />
+      <section className="hero animate-rise relative overflow-hidden rounded-card px-6 py-7 shadow-lift sm:px-8 sm:py-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-hero-fg/60">
+              Owner dashboard
+            </p>
+            <h1 className="mt-2 text-2xl font-extrabold sm:text-[28px]">
+              Today at the clinic
+            </h1>
+            <p className="mt-1 text-sm text-hero-fg/75">
+              {formatClinicDate(today.start)}
+            </p>
+          </div>
+
+          <Link
+            href="/super-admin/owner/staff"
+            className="inline-flex items-center gap-2 rounded-control border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-bold text-hero-fg transition-ui hover:border-white/50 hover:bg-white/20"
+          >
+            Manage staff
+            <span aria-hidden="true">→</span>
+          </Link>
         </div>
 
-        {(doctors ?? []).length > 0 && (
-          <div className="mt-5">
-            <span className="block text-[11px] uppercase tracking-wider text-rose">
-              Load per doctor today
-            </span>
-            <ul className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
-              {(doctors ?? []).map((d) => (
-                <li key={d.id} className="text-sm text-ink-soft">
-                  {d.full_name}{" "}
-                  <span className="text-ink">{perDoctor.get(d.id) ?? 0}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <Link
-          href="/super-admin/owner/staff"
-          className="mt-6 inline-block text-sm text-sage underline underline-offset-2"
-        >
-          Manage staff →
-        </Link>
+        <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat
+            label="Checked in"
+            value={(todayVisits ?? []).length}
+            dot="bg-white/70"
+          />
+          <Stat label="With nurse" value={counts.awaiting_vitals} dot="bg-amber-300" />
+          <Stat label="With doctor" value={counts.awaiting_doctor} dot="bg-teal-300" />
+          <Stat label="Completed" value={counts.completed} dot="bg-emerald-300" />
+        </div>
       </section>
 
-      <section className="border border-line bg-paper px-8 py-7 rounded-card">
-        <h2 className="font-serif text-lg">Find a patient</h2>
-        <p className="mt-1 text-sm text-ink-soft">
-          Search by visit code, patient code, name or phone. Narrow it with a
-          date range.
-        </p>
+      <section className={`${card} ${cardPad}`}>
+        <SectionHead
+          title="Find a patient"
+          hint="Search by visit code, patient code, name or phone. Narrow it with a date range."
+        />
 
         <form className="mt-5 grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
           <input
@@ -158,42 +200,51 @@ export default async function OwnerPage({
             className={field}
             aria-label="To date"
           />
-          <button
-            type="submit"
-            className="border border-sage bg-sage px-6 py-2.5 text-sm font-medium text-paper hover:bg-sage-deep rounded-card"
-          >
+          <button type="submit" className={btnPrimary}>
             Search
           </button>
         </form>
 
-        {searching && (
-          <Link
-            href="/super-admin/owner"
-            className="mt-3 inline-block text-xs text-sage underline"
-          >
-            Clear
-          </Link>
-        )}
-
-        <p className="mt-5 text-xs text-ink-soft">
-          {searching
-            ? `${rows.length} matching ${rows.length === 1 ? "visit" : "visits"}`
-            : `${rows.length} most recent ${rows.length === 1 ? "visit" : "visits"}`}
-        </p>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs font-semibold text-muted">
+            {total === 0
+              ? "No visits"
+              : `Showing ${firstShown}–${lastShown} of ${total} ${
+                  searching ? "matching " : ""
+                }${total === 1 ? "visit" : "visits"}`}
+          </p>
+          {searching && (
+            <Link
+              href="/super-admin/owner"
+              className="text-xs font-bold text-primary underline-offset-4 hover:underline"
+            >
+              Clear filters
+            </Link>
+          )}
+        </div>
 
         {rows.length === 0 ? (
-          <p className="mt-4 text-sm text-ink-soft">Nothing matches that.</p>
+          <div className="mt-4">
+            <EmptyState
+              title={searching ? "Nothing matches that" : "No visits yet"}
+              hint={
+                searching
+                  ? "Try part of a name, or clear the date range."
+                  : "Visits appear here as reception checks patients in."
+              }
+            />
+          </div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+          <div className={`mt-4 ${tableWrap}`}>
+            <table className={tableEl}>
               <thead>
-                <tr className="border-b border-line text-[11px] uppercase tracking-wider text-ink-soft">
-                  <th className="py-2 pr-4 font-normal">Patient</th>
-                  <th className="py-2 pr-4 font-normal">Visit</th>
-                  <th className="py-2 pr-4 font-normal">Reception</th>
-                  <th className="py-2 pr-4 font-normal">Nurse</th>
-                  <th className="py-2 pr-4 font-normal">Doctor</th>
-                  <th className="py-2 font-normal">Status</th>
+                <tr>
+                  <th className={`${thCell} rounded-tl-card`}>Patient</th>
+                  <th className={thCell}>Visit</th>
+                  <th className={thCell}>Reception</th>
+                  <th className={thCell}>Nurse</th>
+                  <th className={thCell}>Doctor</th>
+                  <th className={`${thCell} rounded-tr-card`}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -210,35 +261,41 @@ export default async function OwnerPage({
                   const doc = one(v.doctor) as { full_name: string } | null;
 
                   return (
-                    <tr key={v.id} className="border-b border-line align-top">
-                      <td className="py-3 pr-4">
+                    <tr key={v.id} className={trRow}>
+                      <td className={tdCell}>
                         <Link
                           href={`/super-admin/owner/patients/${v.patient_id}`}
-                          className="text-ink hover:underline"
+                          className="font-bold text-fg underline-offset-4 transition-ui hover:text-primary hover:underline"
                         >
                           {p?.full_name ?? "—"}
                         </Link>
-                        <span className="block text-xs text-ink-soft">
-                          {p?.patient_code} · {p?.phone}
+                        <span className="mt-0.5 block text-xs text-muted">
+                          <Code>{p?.patient_code}</Code> · {p?.phone}
                         </span>
                       </td>
-                      <td className="py-3 pr-4">
-                        {v.visit_code}
-                        <span className="block text-xs text-ink-soft">
+                      <td className={tdCell}>
+                        <Code className="font-semibold">{v.visit_code}</Code>
+                        <span className="mt-0.5 block text-xs text-muted">
                           {formatClinicDate(v.created_at)}{" "}
                           {formatClinicTime(v.created_at)} · {v.visit_type}
                         </span>
                       </td>
-                      <td className="py-3 pr-4 text-ink-soft">{rec?.full_name ?? "—"}</td>
-                      <td className="py-3 pr-4 text-ink-soft">{nur?.full_name ?? "—"}</td>
-                      <td className="py-3 pr-4 text-ink-soft">
-                        {doc?.full_name ?? "—"}
-                        <span className="block text-[11px]">
-                          {v.doctor_requested ? "requested" : "auto"}
-                        </span>
+                      <td className={tdCell}>
+                        <Person name={rec?.full_name} role="receptionist" />
                       </td>
-                      <td className="py-3 text-ink-soft">
-                        {STATUS_LABEL[v.status] ?? v.status}
+                      <td className={tdCell}>
+                        <Person name={nur?.full_name} role="nurse" />
+                      </td>
+                      <td className={tdCell}>
+                        <Person name={doc?.full_name} role="doctor" />
+                        {doc && (
+                          <span className="mt-0.5 block pl-8 text-[11px] font-semibold text-muted">
+                            {v.doctor_requested ? "requested" : "auto-assigned"}
+                          </span>
+                        )}
+                      </td>
+                      <td className={tdCell}>
+                        <StatusPill status={v.status} />
                       </td>
                     </tr>
                   );
@@ -246,6 +303,37 @@ export default async function OwnerPage({
               </tbody>
             </table>
           </div>
+        )}
+
+        {lastPage > 1 && (
+          <nav
+            aria-label="Pagination"
+            className="mt-5 flex items-center justify-between gap-3"
+          >
+            {page > 1 ? (
+              <Link href={pageHref({ q, from, to }, page - 1)} className={btnGhost}>
+                ← Previous
+              </Link>
+            ) : (
+              <span className={`${btnGhost} pointer-events-none opacity-40`}>
+                ← Previous
+              </span>
+            )}
+
+            <span className="text-xs font-bold tabular text-muted">
+              Page {page} of {lastPage}
+            </span>
+
+            {page < lastPage ? (
+              <Link href={pageHref({ q, from, to }, page + 1)} className={btnGhost}>
+                Next →
+              </Link>
+            ) : (
+              <span className={`${btnGhost} pointer-events-none opacity-40`}>
+                Next →
+              </span>
+            )}
+          </nav>
         )}
       </section>
     </div>
