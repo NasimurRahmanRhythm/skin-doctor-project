@@ -68,7 +68,7 @@ const { data: p, error: pErr } = await db
 if (pErr) {
   bad("patient_code default", pErr.message);
 } else {
-  if (/^LL-P-\d{5}$/.test(p.patient_code)) ok(`patient_code format (${p.patient_code})`);
+  if (/^(LL|DS)-P-\d{5}$/.test(p.patient_code)) ok(`patient_code format (${p.patient_code})`);
   else bad("patient_code format", p.patient_code);
 
   const { data: v, error: vErr } = await db
@@ -80,7 +80,7 @@ if (pErr) {
   if (vErr) {
     bad("visit_code trigger", vErr.message);
   } else {
-    if (/^LL-\d{6}-\d{3}$/.test(v.visit_code)) ok(`visit_code format (${v.visit_code})`);
+    if (/^(LL|DS)-\d{6}-\d{3}$/.test(v.visit_code)) ok(`visit_code format (${v.visit_code})`);
     else bad("visit_code format", v.visit_code);
 
     if (v.status === "awaiting_vitals") ok("visit default status");

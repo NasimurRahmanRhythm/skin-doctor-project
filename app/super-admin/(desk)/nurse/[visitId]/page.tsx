@@ -16,9 +16,9 @@ export default async function NurseVisitPage({
   const { data: visit } = await supabase
     .from("visits")
     .select(
-      `id, visit_code, visit_type, chief_complaint, created_at, status,
+      `id, visit_code, visit_type, chief_complaint, skin_types, skin_conditions, intake_notes, created_at, status,
        doctor_id, receptionist_id,
-       patients(full_name, patient_code, phone, age, gender)`,
+       patients(full_name, patient_code, phone, age, gender, date_of_birth, email)`,
     )
     .eq("id", visitId)
     .maybeSingle();
@@ -56,7 +56,7 @@ export default async function NurseVisitPage({
           ← Back to queue
         </Link>
         <Link
-          href={`/super-admin/print/${visit.id}?scope=nurse`}
+          href={`/super-admin/print/${visit.id}`}
           target="_blank"
           className="inline-flex items-center gap-2 rounded-control border border-hairline bg-surface px-4 py-2 text-xs font-bold text-fg transition-ui hover:border-primary hover:bg-primary-soft hover:text-primary"
         >
@@ -69,6 +69,9 @@ export default async function NurseVisitPage({
           visit_code: visit.visit_code,
           visit_type: visit.visit_type,
           chief_complaint: visit.chief_complaint,
+          skin_types: visit.skin_types,
+          skin_conditions: visit.skin_conditions,
+          intake_notes: visit.intake_notes,
           created_at: visit.created_at,
           patient: patient ?? null,
           receptionistName: receptionist?.full_name ?? null,

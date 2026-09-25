@@ -6,30 +6,30 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-const optionalNumber = (min: number, max: number, label: string) =>
+const number = (min: number, max: number, label: string, required: boolean) =>
   z
     .string()
     .trim()
-    .optional()
+    .nullish()
+    .refine((v) => !required || !!v, { message: `Enter the ${label}.` })
     .transform((v) => (v ? Number(v) : null))
     .refine((v) => v === null || (Number.isFinite(v) && v >= min && v <= max), {
       message: `Enter a sensible ${label}.`,
     });
 
+// The nurse desk takes four readings; only blood sugar may be skipped.
 const vitalsSchema = z.object({
-  height_cm: optionalNumber(30, 250, "height"),
-  weight_kg: optionalNumber(1, 400, "weight"),
-  blood_sugar: optionalNumber(20, 800, "blood sugar"),
-  temperature: optionalNumber(30, 45, "temperature"),
-  pulse: optionalNumber(20, 250, "pulse"),
+  height_cm: number(30, 250, "height", true),
+  weight_kg: number(1, 400, "weight", true),
+  blood_sugar: number(20, 800, "blood sugar", false),
   blood_pressure: z
     .string()
     .trim()
-    .optional()
+    .nullish()
+    .refine((v) => !!v, { message: "Enter the blood pressure." })
     .refine((v) => !v || /^\d{2,3}\/\d{2,3}$/.test(v), {
       message: "Blood pressure goes in as 120/80.",
     }),
-  nurse_notes: z.string().trim().optional(),
 });
 
 export type VitalsState = { error?: string };
@@ -47,9 +47,6 @@ export async function saveVitals(
     weight_kg: formData.get("weight_kg"),
     blood_pressure: formData.get("blood_pressure"),
     blood_sugar: formData.get("blood_sugar"),
-    temperature: formData.get("temperature"),
-    pulse: formData.get("pulse"),
-    nurse_notes: formData.get("nurse_notes"),
   });
 
   if (!parsed.success) {
@@ -67,11 +64,8 @@ export async function saveVitals(
     .update({
       height_cm: v.height_cm,
       weight_kg: v.weight_kg,
-      blood_pressure: v.blood_pressure || null,
+      blood_pressure: v.blood_pressure,
       blood_sugar: v.blood_sugar,
-      temperature: v.temperature,
-      pulse: v.pulse,
-      nurse_notes: v.nurse_notes || null,
       nurse_id: staff.id,
       status: "awaiting_doctor",
     })

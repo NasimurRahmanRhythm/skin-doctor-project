@@ -13,7 +13,9 @@ import {
   fieldLabel as label,
   SectionHead,
 } from "@/components/ui";
+import { clinicToday } from "@/lib/clinic";
 import { compressImage, formatBytes } from "@/lib/compress-image";
+import { SKIN_CONDITIONS, SKIN_TYPES } from "@/lib/skin";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/uploads";
 import {
   checkIn,
@@ -21,8 +23,6 @@ import {
   type CheckInState,
   type PatientMatch,
 } from "./actions";
-
-type Doctor = { id: string; full_name: string; specialty: string | null };
 
 const field = `${fieldBase} mt-1.5`;
 const MAX_FILES = 5;
@@ -40,17 +40,53 @@ function SubmitButton() {
   );
 }
 
+function CheckboxGroup({
+  name,
+  legend,
+  options,
+}: {
+  name: string;
+  legend: string;
+  options: readonly { value: string; label: string }[];
+}) {
+  return (
+    <fieldset className="sm:col-span-2">
+      <legend className={label}>
+        {legend} <span className="text-muted">(tick all that apply)</span>
+      </legend>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {options.map((o) => (
+          <label
+            key={o.value}
+            className="flex cursor-pointer items-center gap-2 rounded-control border border-hairline px-3 py-2 text-sm has-[:checked]:border-primary/50 has-[:checked]:bg-primary/8"
+          >
+            <input
+              type="checkbox"
+              name={name}
+              value={o.value}
+              className="accent-[var(--primary)]"
+            />
+            {o.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+type Doctor = { id: string; full_name: string; specialty: string | null };
+
 export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
   const [state, action] = useActionState<CheckInState, FormData>(checkIn, {});
   const [match, setMatch] = useState<PatientMatch>(null);
   const [, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
 
-  // Name and age are held here rather than left uncontrolled, because the
-  // phone lookup has to fill them in after they have already rendered — and
-  // must never overwrite something the desk has typed.
+  // Name and date of birth are held here rather than left uncontrolled,
+  // because the phone lookup has to fill them in after they have already
+  // rendered — and must never overwrite something the desk has typed.
   const [name, setName] = useState("");
-  const [age, setAge] = useState("");
+  const [dob, setDob] = useState("");
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [picked, setPicked] = useState<{ name: string; size: number }[]>([]);
@@ -64,9 +100,7 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
       setMatch(found);
       if (!found) return;
       setName((current) => (current.trim() ? current : found.full_name));
-      setAge((current) =>
-        current.trim() ? current : found.age != null ? String(found.age) : "",
-      );
+      setDob((current) => current || found.date_of_birth || "");
     });
   }
 
@@ -151,8 +185,7 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             </span>
           </div>
           <div>
-            Doctor: <span className="text-fg">{s.doctorName}</span>{" "}
-            {s.wasRequested ? "(requested)" : "(first available)"}
+            Doctor: <span className="text-fg">{s.doctorName}</span>
           </div>
           {s.attachments.length > 0 && (
             <div>
@@ -182,7 +215,7 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             Check in another patient
           </button>
           <Link
-            href={`/super-admin/print/${s.visitId}?scope=reception`}
+            href={`/super-admin/print/${s.visitId}`}
             target="_blank"
             className={btnGhost}
           >
@@ -244,32 +277,33 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
         </div>
 
         <div>
-          <label htmlFor="age" className={label}>
-            Age
+          <label htmlFor="date_of_birth" className={label}>
+            Date of birth
           </label>
           <input
-            id="age"
-            name="age"
-            type="number"
-            min={0}
-            max={129}
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            placeholder="34"
+            id="date_of_birth"
+            name="date_of_birth"
+            type="date"
+            required
+            min="1890-01-02"
+            max={clinicToday()}
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
             className={field}
           />
         </div>
 
         <div>
-          <label htmlFor="gender" className={label}>
-            Gender
+          <label htmlFor="email" className={label}>
+            Email <span className="text-muted">(optional)</span>
           </label>
-          <select id="gender" name="gender" defaultValue="" className={field}>
-            <option value="">Not stated</option>
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-            <option value="other">Other</option>
-          </select>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="farhana@example.com"
+            className={field}
+          />
         </div>
 
         <div className="sm:col-span-2">
@@ -279,15 +313,23 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
           <input id="address" name="address" className={field} />
         </div>
 
+        <CheckboxGroup name="skin_types" legend="Skin type" options={SKIN_TYPES} />
+
+        <CheckboxGroup
+          name="skin_conditions"
+          legend="Skin condition"
+          options={SKIN_CONDITIONS}
+        />
+
         <div className="sm:col-span-2">
-          <label htmlFor="chief_complaint" className={label}>
-            Reason for visit <span className="text-muted">(optional)</span>
+          <label htmlFor="notes" className={label}>
+            Notes <span className="text-muted">(optional)</span>
           </label>
           <textarea
-            id="chief_complaint"
-            name="chief_complaint"
+            id="notes"
+            name="notes"
             rows={3}
-            placeholder="Itchy rash on both forearms for two weeks"
+            placeholder="Anything the nurse or doctor should know"
             className={`${field} resize-y`}
           />
         </div>
@@ -344,9 +386,10 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
           </p>
         </div>
 
+
         <div className="sm:col-span-2">
           <label htmlFor="preferred_doctor" className={label}>
-            Which doctor?
+            Doctor
           </label>
           <select
             id="preferred_doctor"
@@ -354,7 +397,7 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             defaultValue="any"
             className={field}
           >
-            <option value="any">No preference — first available</option>
+            <option value="any">First available — shortest queue</option>
             {doctors.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.full_name}
@@ -362,8 +405,8 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
               </option>
             ))}
           </select>
-          <p className="mt-2 text-xs text-muted">
-            No preference goes to whichever doctor has the lightest queue today.
+          <p className="mt-1.5 text-xs text-muted">
+            The doctor&rsquo;s name goes on the printed pad.
           </p>
         </div>
       </div>

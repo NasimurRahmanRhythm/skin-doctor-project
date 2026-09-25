@@ -1,10 +1,19 @@
 import { card, cardPad, Code, HandledBy } from "@/components/ui";
-import { formatClinicDate, formatClinicTime } from "@/lib/clinic";
+import {
+  formatClinicDate,
+  formatClinicTime,
+  formatDateOfBirth,
+  patientAge,
+} from "@/lib/clinic";
+import { SKIN_CONDITIONS, SKIN_TYPES, skinLabels } from "@/lib/skin";
 
 export type VisitSummaryData = {
   visit_code: string;
   visit_type: string;
   chief_complaint: string | null;
+  skin_types: string[] | null;
+  skin_conditions: string[] | null;
+  intake_notes: string | null;
   created_at: string;
   patient: {
     full_name: string;
@@ -12,6 +21,8 @@ export type VisitSummaryData = {
     phone: string;
     age: number | null;
     gender: string | null;
+    date_of_birth: string | null;
+    email: string | null;
   } | null;
   /**
    * Who handled the visit. Passing a key at all is what makes it show, so a
@@ -39,6 +50,7 @@ function Item({ label, value }: { label: string; value: string | null }) {
 /** What reception recorded. Read-only wherever it appears. */
 export default function VisitSummary({ visit }: { visit: VisitSummaryData }) {
   const p = visit.patient;
+  const age = p ? patientAge(p) : null;
   const hasHandlers =
     visit.receptionistName !== undefined ||
     visit.nurseName !== undefined ||
@@ -57,10 +69,29 @@ export default function VisitSummary({ visit }: { visit: VisitSummaryData }) {
 
       <div className="mt-5 grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <Item label="Patient code" value={p?.patient_code ?? null} />
-        <Item label="Age" value={p?.age != null ? String(p.age) : null} />
-        <Item label="Gender" value={p?.gender ?? null} />
+        <Item
+          label="Date of birth"
+          value={
+            p?.date_of_birth
+              ? `${formatDateOfBirth(p.date_of_birth)} (${age}y)`
+              : age != null
+                ? `${age}y`
+                : null
+          }
+        />
         <Item label="Phone" value={p?.phone ?? null} />
+        <Item label="Email" value={p?.email ?? null} />
         <Item label="Visit type" value={visit.visit_type} />
+        {/* Only asked before the intake rework; kept for older records. */}
+        {p?.gender && <Item label="Gender" value={p.gender} />}
+      </div>
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <Item label="Skin type" value={skinLabels(visit.skin_types, SKIN_TYPES)} />
+        <Item
+          label="Skin condition"
+          value={skinLabels(visit.skin_conditions, SKIN_CONDITIONS)}
+        />
       </div>
 
       {hasHandlers && (
@@ -80,6 +111,17 @@ export default function VisitSummary({ visit }: { visit: VisitSummaryData }) {
           </span>
           <p className="mt-1 whitespace-pre-wrap text-sm font-medium">
             {visit.chief_complaint}
+          </p>
+        </div>
+      )}
+
+      {visit.intake_notes && (
+        <div className="mt-5 rounded-control border-l-[3px] border-accent bg-accent-soft/60 px-4 py-3">
+          <span className="block text-[11px] font-bold uppercase tracking-wider text-accent">
+            Reception notes
+          </span>
+          <p className="mt-1 whitespace-pre-wrap text-sm font-medium">
+            {visit.intake_notes}
           </p>
         </div>
       )}

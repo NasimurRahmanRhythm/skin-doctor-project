@@ -185,7 +185,7 @@ export const thCell =
 export const tdCell = "px-4 py-3.5 align-top";
 
 /**
- * Rows tint on hover and grow a teal edge on the left, so the eye can follow
+ * Rows tint on hover and grow a gold edge on the left, so the eye can follow
  * one patient across six columns without a zebra pattern shouting underneath.
  */
 export const trRow =

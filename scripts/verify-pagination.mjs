@@ -61,7 +61,7 @@ async function ownerCookie() {
  */
 function visitCodes(html) {
   const withoutPlaceholders = html.replace(/placeholder="[^"]*"/g, "");
-  return new Set(withoutPlaceholders.match(/LL-\d{6}-\d{3}/g) ?? []);
+  return new Set(withoutPlaceholders.match(/(?:LL|DS)-\d{6}-\d{3}/g) ?? []);
 }
 
 /**

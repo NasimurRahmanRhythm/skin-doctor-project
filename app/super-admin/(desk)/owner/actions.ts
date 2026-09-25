@@ -32,7 +32,9 @@ export async function addStaff(
     email: formData.get("email"),
     full_name: formData.get("full_name"),
     role: formData.get("role"),
-    specialty: formData.get("specialty"),
+    // The specialty input only renders for doctors; for every other role
+    // FormData returns null, which .optional() rejects.
+    specialty: formData.get("specialty") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Check the form." };

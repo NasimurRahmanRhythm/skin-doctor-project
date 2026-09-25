@@ -16,25 +16,24 @@ export default async function ReceptionPage() {
   const supabase = await createClient();
   const { start, end } = clinicDayRange();
 
-  const [{ data: doctors }, { data: todays }] = await Promise.all([
-    supabase
-      .from("staff_directory")
-      .select("id, full_name, specialty")
-      .eq("role", "doctor")
-      .eq("is_active", true)
-      .order("full_name"),
-    // RLS already limits this to visits this receptionist created; the date
-    // range narrows it to today so the list stays short at a busy desk.
-    supabase
-      .from("visits")
-      .select(
-        "id, visit_code, status, visit_type, created_at, patients(full_name, patient_code)",
-      )
-      .eq("receptionist_id", staff.id)
-      .gte("created_at", start)
-      .lt("created_at", end)
-      .order("created_at", { ascending: false }),
-  ]);
+  // RLS already limits this to visits this receptionist created; the date
+  // range narrows it to today so the list stays short at a busy desk.
+  const { data: doctors } = await supabase
+    .from("staff_directory")
+    .select("id, full_name, specialty")
+    .eq("role", "doctor")
+    .eq("is_active", true)
+    .order("full_name");
+
+  const { data: todays } = await supabase
+    .from("visits")
+    .select(
+      "id, visit_code, status, visit_type, created_at, patients(full_name, patient_code)",
+    )
+    .eq("receptionist_id", staff.id)
+    .gte("created_at", start)
+    .lt("created_at", end)
+    .order("created_at", { ascending: false });
 
   // What this desk attached at check-in, so it can confirm a scan landed.
   // RLS limits this to entries this receptionist wrote — clinical notes on the
@@ -111,7 +110,7 @@ export default async function ReceptionPage() {
                   <div className="flex shrink-0 items-center gap-3">
                     <StatusPill status={v.status} />
                     <Link
-                      href={`/super-admin/print/${v.id}?scope=reception`}
+                      href={`/super-admin/print/${v.id}`}
                       target="_blank"
                       className="text-xs font-bold text-primary underline-offset-4 transition-ui hover:underline"
                     >

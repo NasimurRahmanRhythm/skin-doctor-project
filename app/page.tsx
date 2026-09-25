@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Brand from "@/components/brand";
+import { BrandLockup } from "@/components/brand";
 import { btnPrimary, card } from "@/components/ui";
 
 export default function Home() {
@@ -7,9 +7,8 @@ export default function Home() {
     <main className="flex flex-1 items-center justify-center px-4 py-16">
       <div className={`${card} w-full max-w-sm px-6 py-8 text-center sm:px-8`}>
         <div className="flex justify-center">
-          <Brand />
+          <BrandLockup />
         </div>
-        <p className="mt-2 text-sm text-muted">Skin &amp; Body Studio</p>
 
         <p className="mt-7 text-sm leading-relaxed text-muted">
           The public site lives separately. Clinic staff sign in below.

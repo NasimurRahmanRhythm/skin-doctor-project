@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Manrope } from "next/font/google";
+import { Cormorant_Garamond, JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 
 /**
@@ -22,16 +22,27 @@ const monoCode = JetBrains_Mono({
   display: "swap",
 });
 
+/**
+ * Only for the letterhead: the doctor's name and the brand on the
+ * prescription pad, where the logo's serif voice belongs. Never for UI text.
+ */
+const display = Cormorant_Garamond({
+  variable: "--font-display-serif",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Lumen & Leaf",
-  description: "Skin & Body Studio — clinic console",
+  title: "DermaSoul Aesthetics",
+  description: "DermaSoul Medical Aesthetics by Dr. Nusrat Liza — clinic console",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${manrope.variable} ${monoCode.variable} h-full antialiased`}
+      className={`${manrope.variable} ${monoCode.variable} ${display.variable} h-full antialiased`}
     >
       <body className="font-sans min-h-full flex flex-col">{children}</body>
     </html>

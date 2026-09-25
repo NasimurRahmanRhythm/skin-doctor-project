@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import Brand from "@/components/brand";
+import { BrandLockup } from "@/components/brand";
 import { btnPrimary, card, field, fieldLabel } from "@/components/ui";
 import { sendCode, verifyCode, type LoginState } from "./actions";
 
@@ -30,7 +30,7 @@ export default function LoginForm({ expired }: { expired: boolean }) {
     <main className="flex flex-1 items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex justify-center">
-          <Brand />
+          <BrandLockup width={200} />
         </div>
 
         <div className={`${card} px-6 py-7 sm:px-7`}>

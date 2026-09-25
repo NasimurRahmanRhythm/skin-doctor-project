@@ -1,9 +1,11 @@
+import Image from "next/image";
+
 /**
  * Wordmark for the console.
  *
- * A small leaf glyph plus plain type — the prototype's italic serif read as a
- * spa brochure, which is the wrong register for a screen staff work in all
- * day. The mark carries the brand; the type stays out of the way.
+ * The DS monogram from the logo plus plain type. The full lockup's script
+ * "Soul" is lovely on a sign and unreadable at 18px in a sticky header, so the
+ * mark carries the brand and the type stays out of the way.
  */
 export default function Brand({
   size = "md",
@@ -13,42 +15,22 @@ export default function Brand({
   subtitle?: string;
 }) {
   const type = size === "sm" ? "text-base" : "text-lg";
-  const glyph = size === "sm" ? 16 : 18;
+  const glyph = size === "sm" ? 28 : 34;
 
   return (
     <span className="flex items-center gap-2.5">
-      <svg
+      <Image
+        src="/brand/mark.png"
+        alt=""
         width={glyph}
         height={glyph}
-        viewBox="0 0 20 20"
-        fill="none"
-        aria-hidden="true"
-        className="shrink-0 text-primary"
-      >
-        <path
-          d="M10 18C10 18 3 14.5 3 8.5C3 5 5.5 2 10 2C14.5 2 17 5 17 8.5C17 14.5 10 18 10 18Z"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M10 18V7"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-        <path
-          d="M10 10.5L13 7.5M10 12.5L7 9.5"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-      </svg>
+        loading="eager"
+        className="shrink-0"
+      />
 
       <span className={`${type} font-semibold tracking-tight`}>
-        Lumen
-        <span className="text-muted"> &amp; </span>
-        Leaf
+        DermaSoul
+        <span className="text-muted"> Aesthetics</span>
       </span>
 
       {subtitle && (
@@ -57,5 +39,18 @@ export default function Brand({
         </span>
       )}
     </span>
+  );
+}
+
+/** The full logo, for the sign-in and landing pages where there is room. */
+export function BrandLockup({ width = 220 }: { width?: number }) {
+  return (
+    <Image
+      src="/brand/logo.png"
+      alt="DermaSoul Medical Aesthetics by Dr. Nusrat Liza"
+      width={width}
+      height={Math.round((width * 866) / 933)}
+      loading="eager"
+    />
   );
 }

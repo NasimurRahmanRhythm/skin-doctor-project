@@ -13,12 +13,7 @@ import {
 } from "@/components/ui";
 import { compressImage, formatBytes } from "@/lib/compress-image";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/uploads";
-import {
-  addEntry,
-  saveConsultation,
-  type ConsultState,
-  type EntryState,
-} from "../actions";
+import { addEntry, type EntryState } from "../actions";
 
 function Submit({
   label,
@@ -38,112 +33,6 @@ function Submit({
     >
       {pending ? busy : label}
     </button>
-  );
-}
-
-export function ConsultForm({
-  visitId,
-  initial,
-  completed,
-}: {
-  visitId: string;
-  initial: {
-    diagnosis: string | null;
-    prescription: string | null;
-    advice: string | null;
-    follow_up_date: string | null;
-  };
-  completed: boolean;
-}) {
-  const [state, action] = useActionState<ConsultState, FormData>(saveConsultation, {});
-
-  return (
-    <form action={action} className={`${card} ${cardPad}`}>
-      <input type="hidden" name="visit_id" value={visitId} />
-      <SectionHead
-        title="Consultation"
-        trailing={
-          completed ? (
-            <span className="rounded-full border border-ok/40 bg-ok/10 px-2.5 py-0.5 text-[11px] font-medium text-ok">
-              Completed
-            </span>
-          ) : undefined
-        }
-      />
-
-      <div className="mt-5 space-y-4">
-        <div>
-          <label htmlFor="diagnosis" className={fieldLabel}>
-            Diagnosis
-          </label>
-          <textarea
-            id="diagnosis"
-            name="diagnosis"
-            rows={2}
-            defaultValue={initial.diagnosis ?? ""}
-            placeholder="Contact dermatitis, both forearms"
-            className={`${field} mt-1.5 resize-y`}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="prescription" className={fieldLabel}>
-            Prescription
-          </label>
-          <textarea
-            id="prescription"
-            name="prescription"
-            rows={5}
-            defaultValue={initial.prescription ?? ""}
-            placeholder={
-              "Mometasone 0.1% cream — thin layer, twice daily, 10 days\nCetirizine 10mg — one at night, 7 days"
-            }
-            className={`${field} mt-1.5 resize-y font-mono text-[13px] leading-relaxed`}
-          />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="advice" className={fieldLabel}>
-              Advice
-            </label>
-            <textarea
-              id="advice"
-              name="advice"
-              rows={3}
-              defaultValue={initial.advice ?? ""}
-              className={`${field} mt-1.5 resize-y`}
-            />
-          </div>
-          <div>
-            <label htmlFor="follow_up_date" className={fieldLabel}>
-              Follow-up date
-            </label>
-            <input
-              id="follow_up_date"
-              name="follow_up_date"
-              type="date"
-              defaultValue={initial.follow_up_date ?? ""}
-              className={`${field} mt-1.5`}
-            />
-          </div>
-        </div>
-      </div>
-
-      {state.error && <p className="mt-4 text-sm text-danger">{state.error}</p>}
-      {state.saved && !state.error && (
-        <p className="mt-4 text-sm text-ok">Saved.</p>
-      )}
-
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Submit label="Save" busy="Saving…" variant="ghost" />
-        {!completed && (
-          <button type="submit" name="complete" value="1" className={btnPrimary}>
-            Save &amp; complete visit
-          </button>
-        )}
-      </div>
-    </form>
   );
 }
 

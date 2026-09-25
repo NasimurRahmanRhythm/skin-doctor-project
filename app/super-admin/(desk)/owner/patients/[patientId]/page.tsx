@@ -2,7 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ENTRY_TYPE_LABEL, Person } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
-import { formatClinicDate, formatClinicTime } from "@/lib/clinic";
+import {
+  formatClinicDate,
+  formatClinicTime,
+  formatDateOfBirth,
+  patientAge,
+} from "@/lib/clinic";
+import {
+  ReadBullets,
+  ReadInvestigations,
+  ReadMedicines,
+  ReadNumbered,
+} from "@/components/rx-pad";
+import { readPad, type PadSource } from "@/lib/prescription";
+import { SKIN_CONDITIONS, SKIN_TYPES, skinLabels } from "@/lib/skin";
 import { createClient } from "@/lib/supabase/server";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -54,7 +67,9 @@ export default async function OwnerPatientPage({
 
   const { data: patient } = await supabase
     .from("patients")
-    .select("id, patient_code, full_name, phone, age, gender, address, created_at")
+    .select(
+      "id, patient_code, full_name, phone, email, age, date_of_birth, gender, address, created_at",
+    )
     .eq("id", patientId)
     .maybeSingle();
 
@@ -64,9 +79,11 @@ export default async function OwnerPatientPage({
     .from("visits")
     .select(
       `id, visit_code, status, visit_type, doctor_requested, chief_complaint,
+       skin_types, skin_conditions, intake_notes,
        created_at, vitals_at, completed_at,
        height_cm, weight_kg, blood_pressure, blood_sugar, temperature, pulse, nurse_notes,
        diagnosis, prescription, advice, follow_up_date,
+       complaints, examinations, investigations, advices, medicines,
        receptionist:receptionist_id(full_name),
        nurse:nurse_id(full_name),
        doctor:doctor_id(full_name, specialty)`,
@@ -110,9 +127,19 @@ export default async function OwnerPatientPage({
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-4">
           <Field label="Phone" value={patient.phone} />
-          <Field label="Age" value={patient.age != null ? String(patient.age) : null} />
-          <Field label="Gender" value={patient.gender} />
+          <Field
+            label="Date of birth"
+            value={
+              patient.date_of_birth
+                ? `${formatDateOfBirth(patient.date_of_birth)} (${patientAge(patient)}y)`
+                : patient.age != null
+                  ? `${patient.age}y`
+                  : null
+            }
+          />
+          <Field label="Email" value={patient.email} />
           <Field label="Total visits" value={String((visits ?? []).length)} />
+          {patient.gender && <Field label="Gender" value={patient.gender} />}
           {patient.address && (
             <div className="sm:col-span-4">
               <Field label="Address" value={patient.address} />
@@ -139,7 +166,7 @@ export default async function OwnerPatientPage({
                   {STATUS_LABEL[v.status] ?? v.status}
                 </span>
                 <Link
-                  href={`/super-admin/print/${v.id}?scope=full`}
+                  href={`/super-admin/print/${v.id}`}
                   target="_blank"
                   className="no-print text-xs font-bold text-primary underline-offset-4 transition-ui hover:underline"
                 >
@@ -169,22 +196,74 @@ export default async function OwnerPatientPage({
               {v.completed_at && <span>done {formatClinicTime(v.completed_at)}</span>}
             </div>
 
+            {(v.skin_types?.length > 0 || v.skin_conditions?.length > 0) && (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Field label="Skin type" value={skinLabels(v.skin_types, SKIN_TYPES)} />
+                <Field
+                  label="Skin condition"
+                  value={skinLabels(v.skin_conditions, SKIN_CONDITIONS)}
+                />
+              </div>
+            )}
+
             {v.chief_complaint && (
               <p className="mt-4 whitespace-pre-wrap text-sm">{v.chief_complaint}</p>
             )}
 
+            {v.intake_notes && (
+              <p className="mt-4 whitespace-pre-wrap text-sm">{v.intake_notes}</p>
+            )}
+
             {(v.blood_pressure || v.height_cm || v.weight_kg) && (
-              <div className="mt-4 grid gap-4 sm:grid-cols-6">
+              <div className="mt-4 grid gap-4 sm:grid-cols-4">
                 <Field label="Height" value={v.height_cm ? `${v.height_cm} cm` : null} />
                 <Field label="Weight" value={v.weight_kg ? `${v.weight_kg} kg` : null} />
                 <Field label="BP" value={v.blood_pressure} />
                 <Field label="Sugar" value={v.blood_sugar ? String(v.blood_sugar) : null} />
-                <Field label="Temp" value={v.temperature ? `${v.temperature} °C` : null} />
-                <Field label="Pulse" value={v.pulse ? `${v.pulse} bpm` : null} />
+                {/* Temperature and pulse are no longer taken; older visits keep theirs. */}
+                {v.temperature && <Field label="Temp" value={`${v.temperature} °C`} />}
+                {v.pulse && <Field label="Pulse" value={`${v.pulse} bpm`} />}
               </div>
             )}
 
-            {(v.diagnosis || v.prescription || v.advice) && (
+            {/* The doctor's pad, once anything has been written on it. */}
+            {(v.complaints || v.medicines || v.advices || v.investigations) &&
+              (() => {
+                const pad = readPad(v as unknown as PadSource);
+                const head = "block text-[11px] font-bold uppercase tracking-wider text-accent";
+                return (
+                  <div className="mt-5 grid gap-6 border-t border-hairline pt-4 md:grid-cols-[2fr_3fr]">
+                    <div className="space-y-4">
+                      {pad.complaints.length > 0 && (
+                        <div>
+                          <span className={head}>Chief complaint</span>
+                          <div className="mt-1.5"><ReadBullets items={pad.complaints} /></div>
+                        </div>
+                      )}
+                      {pad.investigations.length > 0 && (
+                        <div>
+                          <span className={head}>Investigation</span>
+                          <div className="mt-1.5"><ReadInvestigations items={pad.investigations} /></div>
+                        </div>
+                      )}
+                      {pad.advices.length > 0 && (
+                        <div>
+                          <span className={head}>Advice</span>
+                          <div className="mt-1.5"><ReadNumbered items={pad.advices} /></div>
+                        </div>
+                      )}
+                    </div>
+                    {pad.medicines.length > 0 && (
+                      <div>
+                        <span className={head}>Rx</span>
+                        <div className="mt-1.5"><ReadMedicines items={pad.medicines} /></div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+            {(v.diagnosis || v.prescription || v.advice) && !v.advices && (
               <div className="mt-5 space-y-4 border-t border-hairline pt-4">
                 {v.diagnosis && (
                   <div>

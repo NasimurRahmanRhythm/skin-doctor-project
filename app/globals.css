@@ -1,73 +1,73 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------
-   Lumen & Leaf — clinic console.
+   DermaSoul Aesthetics — clinic console.
 
-   A tool staff stare at all day. The palette is cool neutrals so
-   white cards lift off the page, one confident teal for anything
-   actionable, and a warm amber reserved for things that want a
-   second look. Record codes and vitals are set in mono so 0/O and
+   A tool staff stare at all day. The palette is warm neutrals so
+   white cards lift off the page, the logo's gold (deepened until
+   white text on it passes contrast) for anything actionable, and a
+   muted rose reserved for things that want a second look. Record codes and vitals are set in mono so 0/O and
    1/l cannot be confused when read aloud over the phone.
    --------------------------------------------------------------- */
 
 :root {
   /* surfaces */
-  --canvas: #f2f5f7;
+  --canvas: #f8f4ee;
   --surface: #ffffff;
-  --subtle: #eef2f5;
-  --hairline: #dde4ea;
+  --subtle: #f3ede5;
+  --hairline: #e7ded2;
 
   /* text */
-  --fg: #0c1c1a;
-  --muted: #5a6b72;
+  --fg: #1f1a14;
+  --muted: #6d6358;
 
-  /* brand */
-  --primary: #0d7d6e;
-  --primary-hover: #0a6255;
-  --primary-soft: #e3f3f0;
+  /* brand — logo gold is #d4a574; #8f6230 is the same hue at 5.3:1 on white */
+  --primary: #8f6230;
+  --primary-hover: #744d22;
+  --primary-soft: #f6ecdf;
   --on-primary: #ffffff;
-  --accent: #b45309;
-  --accent-soft: #fdf2e3;
+  --accent: #a3485f;
+  --accent-soft: #f8eaee;
 
   /* status */
-  --warn: #b45309;
+  --warn: #c2410c;
   --ok: #15803d;
   --danger: #be123c;
 
   /* The dark band behind the owner summary. */
-  --hero-from: #0a322e;
-  --hero-to: #0f766e;
-  --hero-fg: #eaf5f2;
+  --hero-from: #2a1f12;
+  --hero-to: #7a5428;
+  --hero-fg: #faf3e8;
 
   --ring: color-mix(in srgb, var(--primary) 22%, transparent);
-  --elev-1: 0 1px 2px rgb(12 28 26 / 0.04), 0 1px 3px rgb(12 28 26 / 0.06);
-  --elev-2: 0 4px 12px rgb(12 28 26 / 0.08), 0 2px 4px rgb(12 28 26 / 0.05);
+  --elev-1: 0 1px 2px rgb(31 26 20 / 0.04), 0 1px 3px rgb(31 26 20 / 0.06);
+  --elev-2: 0 4px 12px rgb(31 26 20 / 0.08), 0 2px 4px rgb(31 26 20 / 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #0a1211;
-    --surface: #111b1a;
-    --subtle: #182422;
-    --hairline: #26342f;
+    --canvas: #12100d;
+    --surface: #1b1814;
+    --subtle: #231f1a;
+    --hairline: #352e26;
 
-    --fg: #e6efec;
-    --muted: #8ea19b;
+    --fg: #efe8df;
+    --muted: #a59b8f;
 
-    --primary: #2fb8a2;
-    --primary-hover: #45cdb6;
-    --primary-soft: #14302c;
-    --on-primary: #04100e;
-    --accent: #e6a15c;
-    --accent-soft: #2d2317;
+    --primary: #d4a574;
+    --primary-hover: #e2bb8a;
+    --primary-soft: #33271a;
+    --on-primary: #1a1206;
+    --accent: #e08ea2;
+    --accent-soft: #33202a;
 
-    --warn: #e6a15c;
+    --warn: #f0a15c;
     --ok: #4ec07d;
     --danger: #f2687f;
 
-    --hero-from: #08201e;
-    --hero-to: #0d5348;
-    --hero-fg: #e6efec;
+    --hero-from: #1c150c;
+    --hero-to: #5c3f1d;
+    --hero-fg: #f5ecdf;
 
     --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
     --elev-2: 0 4px 14px rgb(0 0 0 / 0.5);
@@ -75,24 +75,24 @@
 }
 
 :root[data-theme="dark"] {
-  --canvas: #0a1211;
-  --surface: #111b1a;
-  --subtle: #182422;
-  --hairline: #26342f;
-  --fg: #e6efec;
-  --muted: #8ea19b;
-  --primary: #2fb8a2;
-  --primary-hover: #45cdb6;
-  --primary-soft: #14302c;
-  --on-primary: #04100e;
-  --accent: #e6a15c;
-  --accent-soft: #2d2317;
-  --warn: #e6a15c;
+  --canvas: #12100d;
+  --surface: #1b1814;
+  --subtle: #231f1a;
+  --hairline: #352e26;
+  --fg: #efe8df;
+  --muted: #a59b8f;
+  --primary: #d4a574;
+  --primary-hover: #e2bb8a;
+  --primary-soft: #33271a;
+  --on-primary: #1a1206;
+  --accent: #e08ea2;
+  --accent-soft: #33202a;
+  --warn: #f0a15c;
   --ok: #4ec07d;
   --danger: #f2687f;
-  --hero-from: #08201e;
-  --hero-to: #0d5348;
-  --hero-fg: #e6efec;
+  --hero-from: #1c150c;
+  --hero-to: #5c3f1d;
+  --hero-fg: #f5ecdf;
 }
 
 @theme inline {
@@ -115,6 +115,7 @@
 
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono-code), ui-monospace, SFMono-Regular, monospace;
+  --font-display: var(--font-display-serif), Georgia, serif;
 
   --radius-card: 12px;
   --radius-control: 9px;
@@ -248,8 +249,8 @@ select:focus-visible {
     --hairline: #999999;
     --fg: #000000;
     --muted: #444444;
-    --primary: #0b4e42;
-    --accent: #8a3f2c;
+    --primary: #6e4a20;
+    --accent: #7d3446;
     --elev-1: none;
     --elev-2: none;
   }

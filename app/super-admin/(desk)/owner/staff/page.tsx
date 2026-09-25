@@ -113,7 +113,7 @@ export default async function StaffPage() {
         </div>
 
         <div className="mt-7 grid gap-3 sm:grid-cols-3">
-          <Stat label="Doctors" value={byRole.doctor} dot="bg-teal-300" />
+          <Stat label="Doctors" value={byRole.doctor} dot="bg-sky-300" />
           <Stat label="Nurses" value={byRole.nurse} dot="bg-amber-300" />
           <Stat
             label="Receptionists"

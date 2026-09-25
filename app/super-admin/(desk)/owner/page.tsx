@@ -166,7 +166,7 @@ export default async function OwnerPage({
             dot="bg-white/70"
           />
           <Stat label="With nurse" value={counts.awaiting_vitals} dot="bg-amber-300" />
-          <Stat label="With doctor" value={counts.awaiting_doctor} dot="bg-teal-300" />
+          <Stat label="With doctor" value={counts.awaiting_doctor} dot="bg-sky-300" />
           <Stat label="Completed" value={counts.completed} dot="bg-emerald-300" />
         </div>
       </section>
@@ -181,7 +181,7 @@ export default async function OwnerPage({
           <input
             name="q"
             defaultValue={q}
-            placeholder="LL-260924-001, LL-P-00007, Farhana, 01711…"
+            placeholder="DS-260925-001, DS-P-00007, Farhana, 01711…"
             className={field}
           />
           <input

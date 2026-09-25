@@ -4,13 +4,15 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { clinicToday } from "@/lib/clinic";
+import { SKIN_CONDITION_VALUES, SKIN_TYPE_VALUES } from "@/lib/skin";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/uploads";
 
 export type PatientMatch = {
   id: string;
   patient_code: string;
   full_name: string;
-  age: number | null;
+  date_of_birth: string | null;
   visitCount: number;
 } | null;
 
@@ -27,7 +29,7 @@ export async function lookupPatient(phone: string): Promise<PatientMatch> {
   const supabase = await createClient();
   const { data: patient } = await supabase
     .from("patients")
-    .select("id, patient_code, full_name, age")
+    .select("id, patient_code, full_name, date_of_birth")
     .eq("phone", trimmed)
     .maybeSingle();
 
@@ -41,22 +43,32 @@ export async function lookupPatient(phone: string): Promise<PatientMatch> {
   return { ...patient, visitCount: count ?? 0 };
 }
 
+/** Blank inputs arrive as "" (or null when not rendered); both mean "not given". */
+const optionalText = z
+  .string()
+  .trim()
+  .nullish()
+  .transform((v) => v || null);
+
 const checkInSchema = z.object({
   full_name: z.string().trim().min(1, "Enter the patient name."),
   phone: z.string().trim().min(6, "Enter a phone number."),
-  age: z
+  date_of_birth: z
     .string()
     .trim()
-    .optional()
-    .transform((v) => (v ? Number(v) : null))
-    .refine((v) => v === null || (Number.isInteger(v) && v >= 0 && v < 130), {
-      message: "Enter a valid age.",
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the date of birth.")
+    .refine((v) => v > "1890-01-01" && v <= clinicToday(), {
+      message: "Enter a valid date of birth.",
     }),
-  gender: z.string().trim().optional(),
-  address: z.string().trim().optional(),
-  chief_complaint: z.string().trim().optional(),
-  // "any" means no preference, so the database picks the least-loaded doctor.
-  preferred_doctor: z.string().trim(),
+  address: optionalText,
+  email: optionalText.pipe(
+    z.email("Enter a valid email address, or leave it blank.").nullable(),
+  ),
+  skin_types: z.array(z.enum(SKIN_TYPE_VALUES)),
+  skin_conditions: z.array(z.enum(SKIN_CONDITION_VALUES)),
+  notes: optionalText,
+  // "any" means no preference: the database picks the least-loaded doctor.
+  preferred_doctor: z.union([z.literal("any"), z.uuid()]).catch("any"),
 });
 
 export type CheckInState = {
@@ -66,7 +78,6 @@ export type CheckInState = {
     patientCode: string;
     patientName: string;
     doctorName: string;
-    wasRequested: boolean;
     returning: boolean;
     visitId: string;
     attachments: string[];
@@ -147,10 +158,12 @@ export async function checkIn(
   const parsed = checkInSchema.safeParse({
     full_name: formData.get("full_name"),
     phone: formData.get("phone"),
-    age: formData.get("age"),
-    gender: formData.get("gender"),
+    date_of_birth: formData.get("date_of_birth"),
     address: formData.get("address"),
-    chief_complaint: formData.get("chief_complaint"),
+    email: formData.get("email"),
+    skin_types: formData.getAll("skin_types"),
+    skin_conditions: formData.getAll("skin_conditions"),
+    notes: formData.get("notes"),
     preferred_doctor: formData.get("preferred_doctor"),
   });
 
@@ -174,7 +187,7 @@ export async function checkIn(
   // one person from ending up with two patient codes.
   const { data: existing, error: lookupError } = await supabase
     .from("patients")
-    .select("id, patient_code")
+    .select("id, patient_code, date_of_birth, email, address")
     .eq("phone", input.phone)
     .maybeSingle();
 
@@ -186,15 +199,26 @@ export async function checkIn(
   if (existing) {
     patientId = existing.id;
     patientCode = existing.patient_code;
+
+    // Fill in what the record is missing — most returning patients were
+    // checked in before DOB and email were asked — but never overwrite what
+    // is already on file from a single desk entry.
+    const fill: Record<string, string> = {};
+    if (!existing.date_of_birth) fill.date_of_birth = input.date_of_birth;
+    if (!existing.email && input.email) fill.email = input.email;
+    if (!existing.address && input.address) fill.address = input.address;
+    if (Object.keys(fill).length > 0) {
+      await supabase.from("patients").update(fill).eq("id", patientId);
+    }
   } else {
     const { data: created, error: insertError } = await supabase
       .from("patients")
       .insert({
         full_name: input.full_name,
         phone: input.phone,
-        age: input.age,
-        gender: input.gender || null,
-        address: input.address || null,
+        date_of_birth: input.date_of_birth,
+        email: input.email,
+        address: input.address,
         created_by: staff.id,
       })
       .select("id, patient_code")
@@ -210,7 +234,8 @@ export async function checkIn(
   const wasRequested = input.preferred_doctor !== "any";
 
   // Assignment happens in the database so the load count and the pick cannot
-  // drift apart when two receptionists check patients in at the same moment.
+  // drift apart when two receptionists check in at once. A requested doctor
+  // who has since been deactivated falls back to the least-loaded one.
   const { data: doctorId, error: assignError } = await supabase.rpc(
     "assign_doctor",
     { p_preferred: wasRequested ? input.preferred_doctor : null },
@@ -227,9 +252,11 @@ export async function checkIn(
       patient_id: patientId,
       receptionist_id: staff.id,
       doctor_id: doctorId,
-      doctor_requested: wasRequested,
+      doctor_requested: wasRequested && doctorId === input.preferred_doctor,
       visit_type: existing ? "returning" : "new",
-      chief_complaint: input.chief_complaint || null,
+      skin_types: input.skin_types,
+      skin_conditions: input.skin_conditions,
+      intake_notes: input.notes,
     })
     .select("id, visit_code")
     .single();
@@ -257,7 +284,6 @@ export async function checkIn(
       patientCode,
       patientName: input.full_name,
       doctorName: doctor?.full_name ?? "Assigned doctor",
-      wasRequested,
       returning: Boolean(existing),
       attachments: attached.names,
       fileWarning: attached.warning,

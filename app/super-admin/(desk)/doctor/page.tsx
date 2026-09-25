@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { card, cardPad, Code, EmptyState, SectionHead } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
-import { clinicDayRange, formatClinicTime } from "@/lib/clinic";
+import { clinicDayRange, formatClinicTime, patientAge } from "@/lib/clinic";
+import { SKIN_CONDITIONS, skinLabels } from "@/lib/skin";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DoctorQueuePage() {
@@ -14,7 +15,7 @@ export default async function DoctorQueuePage() {
     supabase
       .from("visits")
       .select(
-        "id, visit_code, visit_type, chief_complaint, created_at, vitals_at, blood_pressure, patients(full_name, patient_code, age)",
+        "id, visit_code, visit_type, chief_complaint, skin_conditions, intake_notes, created_at, vitals_at, blood_pressure, patients(full_name, patient_code, age, date_of_birth)",
       )
       .eq("status", "awaiting_doctor")
       .order("vitals_at", { ascending: true }),
@@ -63,8 +64,8 @@ export default async function DoctorQueuePage() {
                       <span className="font-bold transition-ui group-hover:text-primary">
                         {p?.full_name ?? "—"}
                       </span>
-                      {p?.age != null && (
-                        <span className="ml-2 text-xs text-muted">{p.age}y</span>
+                      {p && patientAge(p) != null && (
+                        <span className="ml-2 text-xs text-muted">{patientAge(p)}y</span>
                       )}
                       <span className="mt-1 block text-xs text-muted">
                         <Code>{v.visit_code}</Code>
@@ -77,9 +78,16 @@ export default async function DoctorQueuePage() {
                           </>
                         )}
                       </span>
-                      {v.chief_complaint && (
+                      {(v.skin_conditions?.length > 0 ||
+                        v.intake_notes ||
+                        v.chief_complaint) && (
                         <p className="mt-1.5 line-clamp-2 max-w-xl text-sm text-muted">
-                          {v.chief_complaint}
+                          {[
+                            skinLabels(v.skin_conditions, SKIN_CONDITIONS),
+                            v.intake_notes ?? v.chief_complaint,
+                          ]
+                            .filter(Boolean)
+                            .join(" — ")}
                         </p>
                       )}
                     </div>

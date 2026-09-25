@@ -1,41 +1,33 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { card, cardPad, ENTRY_TYPE_LABEL, Person } from "@/components/ui";
-import VisitSummary from "@/components/visit-summary";
+import { card, cardPad, Code, ENTRY_TYPE_LABEL } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { formatClinicDate, formatClinicTime } from "@/lib/clinic";
+import {
+  ageLabel,
+  formatPadDate,
+  PAD_COLUMNS,
+  readPad,
+  type PadSource,
+} from "@/lib/prescription";
+import { SKIN_CONDITIONS, skinLabels } from "@/lib/skin";
 import { createClient } from "@/lib/supabase/server";
 import { markVisitRead } from "../../notification-actions";
-import { ConsultForm, EntryForm } from "./consult-form";
-
-function Vital({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div>
-      <span className="block text-[11px] font-bold uppercase tracking-wider text-muted">
-        {label}
-      </span>
-      <span className="mt-0.5 block text-sm font-semibold text-fg">
-        {value || "—"}
-      </span>
-    </div>
-  );
-}
+import { EntryForm } from "./consult-form";
+import RxEditor from "./rx-editor";
 
 export default async function DoctorVisitPage({
   params,
 }: PageProps<"/super-admin/doctor/[visitId]">) {
-  await requireRole("doctor");
+  const staff = await requireRole("doctor");
   const { visitId } = await params;
   const supabase = await createClient();
 
   const { data: visit } = await supabase
     .from("visits")
     .select(
-      `id, visit_code, visit_type, chief_complaint, created_at, status, patient_id,
-       height_cm, weight_kg, blood_pressure, blood_sugar, temperature, pulse, nurse_notes,
-       nurse_id, receptionist_id,
-       diagnosis, prescription, advice, follow_up_date,
-       patients(full_name, patient_code, phone, age, gender)`,
+      `id, visit_code, visit_type, chief_complaint, intake_notes, created_at, status, patient_id,
+       nurse_id, receptionist_id, ${PAD_COLUMNS},
+       patients(full_name, patient_code, phone, age, date_of_birth)`,
     )
     .eq("id", visitId)
     .maybeSingle();
@@ -62,7 +54,7 @@ export default async function DoctorVisitPage({
     // cannot drift the way matching on a phone string would.
     supabase
       .from("visits")
-      .select("id, visit_code, created_at, diagnosis, status")
+      .select("id, visit_code, created_at, complaints, diagnosis, medicines, status")
       .eq("patient_id", visit.patient_id)
       .neq("id", visitId)
       .order("created_at", { ascending: false })
@@ -86,124 +78,129 @@ export default async function DoctorVisitPage({
     }),
   );
 
-  const completed = visit.status === "completed";
+  const conditions = skinLabels(visit.skin_conditions, SKIN_CONDITIONS);
+  const receptionNote = visit.intake_notes ?? visit.chief_complaint;
 
   return (
     <div className="animate-rise space-y-6">
-      <div className="no-print flex items-center justify-between">
-        <Link href="/super-admin/doctor" className="text-sm font-bold text-primary underline-offset-4 transition-ui hover:underline">
-          ← Back to queue
-        </Link>
-        <Link
-          href={`/super-admin/print/${visit.id}?scope=${completed ? "full" : "doctor"}`}
-          target="_blank"
-          className="inline-flex items-center gap-2 rounded-control border border-hairline bg-surface px-4 py-2 text-xs font-bold text-fg transition-ui hover:border-primary hover:bg-primary-soft hover:text-primary"
-        >
-          Print
-        </Link>
-      </div>
-
-      <VisitSummary
-        visit={{
-          visit_code: visit.visit_code,
-          visit_type: visit.visit_type,
-          chief_complaint: visit.chief_complaint,
-          created_at: visit.created_at,
-          patient: patient ?? null,
-          receptionistName,
-          nurseName,
-        }}
-      />
-
-      <section className={`${card} ${cardPad}`}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-extrabold">Vitals</h2>
-          {nurseName ? (
-            <span className="inline-flex items-center gap-2 text-xs font-semibold text-muted">
-              taken by <Person name={nurseName} role="nurse" />
+      {/* What the front desk and the nurse passed on, above the pad so it is
+          read before anything is written. */}
+      <section className={`${card} px-5 py-4 sm:px-7`}>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted">
+          <span>
+            <Code className="text-fg">{visit.visit_code}</Code> · {visit.visit_type} ·
+            checked in {formatClinicTime(visit.created_at)}
+          </span>
+          {patient?.phone && <span>{patient.phone}</span>}
+          {receptionistName && (
+            <span>
+              checked in by <span className="font-semibold text-fg">{receptionistName}</span>
             </span>
-          ) : (
-            <span className="text-xs text-muted">—</span>
+          )}
+          {nurseName && (
+            <span>
+              vitals by <span className="font-semibold text-fg">{nurseName}</span>
+            </span>
           )}
         </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-6">
-          <Vital label="Height" value={visit.height_cm ? `${visit.height_cm} cm` : null} />
-          <Vital label="Weight" value={visit.weight_kg ? `${visit.weight_kg} kg` : null} />
-          <Vital label="BP" value={visit.blood_pressure} />
-          <Vital label="Sugar" value={visit.blood_sugar ? `${visit.blood_sugar}` : null} />
-          <Vital label="Temp" value={visit.temperature ? `${visit.temperature} °C` : null} />
-          <Vital label="Pulse" value={visit.pulse ? `${visit.pulse} bpm` : null} />
-        </div>
-        {visit.nurse_notes && (
-          <p className="mt-4 whitespace-pre-wrap border-t border-hairline pt-4 text-sm">
-            {visit.nurse_notes}
-          </p>
+        {(conditions || receptionNote) && (
+          <div className="mt-3 flex flex-wrap gap-x-8 gap-y-2 border-t border-hairline pt-3 text-sm">
+            {conditions && (
+              <p>
+                <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                  Reception ticked{" "}
+                </span>
+                {conditions}
+              </p>
+            )}
+            {receptionNote && (
+              <p className="min-w-0 whitespace-pre-wrap">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                  Note{" "}
+                </span>
+                {receptionNote}
+              </p>
+            )}
+          </div>
         )}
       </section>
 
-      {history && history.length > 0 && (
-        <section className="rounded-card border border-hairline bg-surface px-5 py-5 shadow-card sm:px-7 sm:py-6">
-          <h2 className="text-base font-extrabold">
-            Previous visits ({history.length})
-          </h2>
-          <ul className="mt-4 divide-y divide-hairline">
-            {history.map((h) => (
-              <li key={h.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
-                <span className="text-sm text-fg">
-                  {formatClinicDate(h.created_at)}
-                  <span className="ml-3 text-xs text-muted">{h.visit_code}</span>
-                </span>
-                <span className="max-w-md text-right text-xs text-muted">
-                  {h.diagnosis ?? (h.status === "completed" ? "no diagnosis recorded" : h.status)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <ConsultForm
+      <RxEditor
         visitId={visit.id}
-        completed={completed}
-        initial={{
-          diagnosis: visit.diagnosis,
-          prescription: visit.prescription,
-          advice: visit.advice,
-          follow_up_date: visit.follow_up_date,
+        completed={visit.status === "completed"}
+        people={{
+          doctor: { name: staff.full_name, specialty: staff.specialty },
+          patient: {
+            name: patient?.full_name ?? "—",
+            age: patient ? ageLabel(patient) : null,
+            id: patient?.patient_code ?? null,
+          },
+          date: formatPadDate(visit.created_at),
         }}
+        initial={readPad(visit as unknown as PadSource)}
+        legacyPrescription={visit.prescription}
       />
 
-      {withLinks.length > 0 && (
-        <section className="rounded-card border border-hairline bg-surface px-5 py-5 shadow-card sm:px-7 sm:py-6">
-          <h2 className="text-base font-extrabold">Record history</h2>
-          <ul className="mt-4 space-y-5">
-            {withLinks.map((e) => (
-              <li key={e.id} className="border-l-2 border-hairline pl-4">
-                <div className="flex flex-wrap items-baseline gap-3">
-                  <span className="rounded-full bg-subtle px-2.5 py-1 text-[11px] font-bold text-muted">
-                    {ENTRY_TYPE_LABEL[e.type] ?? e.type}
-                  </span>
-                  <span className="font-bold">{e.title}</span>
-                  <span className="text-xs text-muted">
-                    {formatClinicDate(e.created_at)} {formatClinicTime(e.created_at)}
-                  </span>
-                </div>
-                {e.body && <p className="mt-1 whitespace-pre-wrap text-sm">{e.body}</p>}
-                {e.url && (
-                  <a
-                    href={e.url}
-                    target="_blank"
-                    rel="noopener"
-                    className="mt-2 inline-block text-xs text-primary underline"
-                  >
-                    {e.file_name ?? "Attached file"}
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {history && history.length > 0 && (
+          <section className={`${card} ${cardPad}`}>
+            <h2 className="text-base font-extrabold">
+              Previous visits ({history.length})
+            </h2>
+            <ul className="mt-4 divide-y divide-hairline">
+              {history.map((h) => {
+                const summary =
+                  (h.complaints as string[] | null)?.join(", ") || h.diagnosis;
+                const rx = Array.isArray(h.medicines) ? h.medicines.length : 0;
+                return (
+                  <li key={h.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+                    <span className="text-sm text-fg">
+                      {formatClinicDate(h.created_at)}
+                      <span className="ml-3 text-xs text-muted">{h.visit_code}</span>
+                    </span>
+                    <span className="max-w-xs text-right text-xs text-muted">
+                      {summary ?? (h.status === "completed" ? "nothing recorded" : h.status)}
+                      {rx > 0 && ` · ${rx} medicine${rx === 1 ? "" : "s"}`}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        {withLinks.length > 0 && (
+          <section className={`${card} ${cardPad}`}>
+            <h2 className="text-base font-extrabold">Files &amp; notes</h2>
+            <ul className="mt-4 space-y-4">
+              {withLinks.map((e) => (
+                <li key={e.id} className="border-l-2 border-hairline pl-4">
+                  <div className="flex flex-wrap items-baseline gap-3">
+                    <span className="rounded-full bg-subtle px-2.5 py-1 text-[11px] font-bold text-muted">
+                      {ENTRY_TYPE_LABEL[e.type] ?? e.type}
+                    </span>
+                    <span className="font-bold">{e.title}</span>
+                    <span className="text-xs text-muted">
+                      {formatClinicDate(e.created_at)} {formatClinicTime(e.created_at)}
+                    </span>
+                  </div>
+                  {e.body && <p className="mt-1 whitespace-pre-wrap text-sm">{e.body}</p>}
+                  {e.url && (
+                    <a
+                      href={e.url}
+                      target="_blank"
+                      rel="noopener"
+                      className="mt-2 inline-block text-xs text-primary underline"
+                    >
+                      {e.file_name ?? "Attached file"}
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
 
       <EntryForm visitId={visit.id} />
     </div>
