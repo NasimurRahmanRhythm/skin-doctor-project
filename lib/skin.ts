@@ -9,12 +9,14 @@ export const SKIN_TYPES = [
   { value: "oily", label: "Oily" },
   { value: "combination", label: "Combination" },
   { value: "sensitive", label: "Sensitive" },
+  { value: "acne_prone", label: "Acne prone" },
 ] as const;
 
 export const SKIN_CONDITIONS = [
   { value: "acne", label: "Acne" },
-  { value: "dry", label: "Dry" },
+  { value: "acne_scar", label: "Acne scar" },
   { value: "hyperpigmentation", label: "Hyperpigmentation" },
+  { value: "hypopigmentation", label: "Hypopigmentation" },
   { value: "dehydrated", label: "Dehydrated" },
   { value: "allergies", label: "Allergies" },
   { value: "rosacea", label: "Rosacea" },
@@ -33,13 +35,20 @@ export const SKIN_CONDITION_VALUES = SKIN_CONDITIONS.map((s) => s.value) as [
   ...SkinCondition[],
 ];
 
-/** "dry, oily" → "Dry, Oily". Unknown values pass through rather than vanish. */
+/**
+ * "dry, oily" → "Dry, Oily". A value no longer offered (older visits may carry
+ * "dry" as a condition) still reads as a word: "acne_scar" → "Acne scar".
+ */
 export function skinLabels(
   values: string[] | null | undefined,
   options: readonly { value: string; label: string }[],
 ): string | null {
   if (!values || values.length === 0) return null;
   return values
-    .map((v) => options.find((o) => o.value === v)?.label ?? v)
+    .map(
+      (v) =>
+        options.find((o) => o.value === v)?.label ??
+        (v.charAt(0).toUpperCase() + v.slice(1)).replace(/_/g, " "),
+    )
     .join(", ");
 }

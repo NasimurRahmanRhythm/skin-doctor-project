@@ -8,16 +8,20 @@ import {
 } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { clinicDayRange, formatClinicTime } from "@/lib/clinic";
+import VisitSearch from "@/components/visit-search";
 import { createClient } from "@/lib/supabase/server";
 import CheckInForm from "./check-in-form";
 
-export default async function ReceptionPage() {
+export default async function ReceptionPage({
+  searchParams,
+}: PageProps<"/super-admin/reception">) {
   const staff = await requireRole("receptionist");
+  const sp = await searchParams;
   const supabase = await createClient();
   const { start, end } = clinicDayRange();
 
-  // RLS already limits this to visits this receptionist created; the date
-  // range narrows it to today so the list stays short at a busy desk.
+  // Reception can read every visit now, so the list is narrowed to this
+  // receptionist's own check-ins, and to today so it stays short at a busy desk.
   const { data: doctors } = await supabase
     .from("staff_directory")
     .select("id, full_name, specialty")
@@ -36,13 +40,14 @@ export default async function ReceptionPage() {
     .order("created_at", { ascending: false });
 
   // What this desk attached at check-in, so it can confirm a scan landed.
-  // RLS limits this to entries this receptionist wrote — clinical notes on the
-  // same visits stay invisible here.
+  // Only entries this receptionist wrote — the nurse's and doctor's files on
+  // the same visits belong on the patient page, not in this count.
   const visitIds = (todays ?? []).map((v) => v.id);
   const { data: attachments } = visitIds.length
     ? await supabase
         .from("visit_entries")
         .select("visit_id, file_name")
+        .eq("author_id", staff.id)
         .in("visit_id", visitIds)
     : { data: [] };
 
@@ -123,6 +128,8 @@ export default async function ReceptionPage() {
           </ul>
         )}
       </section>
+
+      <VisitSearch searchParams={sp} basePath="/super-admin/reception" />
     </div>
   );
 }

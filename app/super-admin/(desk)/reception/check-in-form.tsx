@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import {
-  btnGhost,
   btnPrimary,
   btnQuiet,
   card,
@@ -19,12 +17,17 @@ import { SKIN_CONDITIONS, SKIN_TYPES } from "@/lib/skin";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/uploads";
 import {
   checkIn,
-  lookupPatient,
+  findPatientByCode,
+  findPatientsByPhone,
   type CheckInState,
-  type PatientMatch,
+  type PatientRecord,
 } from "./actions";
 
 const field = `${fieldBase} mt-1.5`;
+/** A detail filled from the patient record reads as fixed, not as a blank to type in. */
+const locked = "read-only:bg-subtle read-only:text-muted";
+
+const phoneDigits = (phone: string) => phone.replace(/\D/g, "").length;
 const MAX_FILES = 5;
 
 function SubmitButton() {
@@ -44,10 +47,12 @@ function CheckboxGroup({
   name,
   legend,
   options,
+  defaultValues = [],
 }: {
   name: string;
   legend: string;
   options: readonly { value: string; label: string }[];
+  defaultValues?: string[];
 }) {
   return (
     <fieldset className="sm:col-span-2">
@@ -64,6 +69,7 @@ function CheckboxGroup({
               type="checkbox"
               name={name}
               value={o.value}
+              defaultChecked={defaultValues.includes(o.value)}
               className="accent-[var(--primary)]"
             />
             {o.label}
@@ -74,34 +80,106 @@ function CheckboxGroup({
   );
 }
 
+/** One patient on file, offered for the desk to pick. */
+function PatientOption({
+  patient,
+  onPick,
+}: {
+  patient: PatientRecord;
+  onPick: (p: PatientRecord) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(patient)}
+      className="flex w-full items-center justify-between gap-3 rounded-control border border-hairline px-3 py-2 text-left text-sm transition-ui hover:border-primary/55 hover:bg-primary-soft/40"
+    >
+      <span className="min-w-0">
+        <span className="font-bold">{patient.full_name}</span>
+        <span className="mt-0.5 block text-xs text-muted">
+          <span className="font-mono">{patient.patient_code}</span> · {patient.phone}
+        </span>
+      </span>
+      <span className="shrink-0 text-xs text-muted">
+        {patient.visitCount} {patient.visitCount === 1 ? "visit" : "visits"}
+      </span>
+    </button>
+  );
+}
+
 type Doctor = { id: string; full_name: string; specialty: string | null };
 
 export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
   const [state, action] = useActionState<CheckInState, FormData>(checkIn, {});
-  const [match, setMatch] = useState<PatientMatch>(null);
   const [, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
 
-  // Name and date of birth are held here rather than left uncontrolled,
-  // because the phone lookup has to fill them in after they have already
-  // rendered — and must never overwrite something the desk has typed.
+  // New or old is chosen first. An old patient is picked from the records —
+  // by code, or from the suggestions a phone number brings up — and the form
+  // is filled from that record.
+  const [mode, setMode] = useState<"new" | "old">("new");
+  const [patient, setPatient] = useState<PatientRecord | null>(null);
+  const [code, setCode] = useState("");
+  const [codeMiss, setCodeMiss] = useState(false);
+  const [suggestions, setSuggestions] = useState<PatientRecord[]>([]);
+
+  // The patient's details are held here rather than left uncontrolled,
+  // because picking a record has to fill them in after they have rendered.
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [dob, setDob] = useState("");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [picked, setPicked] = useState<{ name: string; size: number }[]>([]);
   const [compressing, setCompressing] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
 
-  function onPhoneBlur(e: React.FocusEvent<HTMLInputElement>) {
-    const phone = e.target.value;
+  function fillFrom(p: PatientRecord | null) {
+    setPatient(p);
+    setSuggestions([]);
+    setName(p?.full_name ?? "");
+    setPhone(p?.phone ?? "");
+    setDob(p?.date_of_birth ?? "");
+    setEmail(p?.email ?? "");
+    setAddress(p?.address ?? "");
+  }
+
+  function switchMode(next: "new" | "old") {
+    setMode(next);
+    setCode("");
+    setCodeMiss(false);
+    fillFrom(null);
+  }
+
+  function onFindByCode() {
     startTransition(async () => {
-      const found = await lookupPatient(phone);
-      setMatch(found);
-      if (!found) return;
-      setName((current) => (current.trim() ? current : found.full_name));
-      setDob((current) => current || found.date_of_birth || "");
+      const found = await findPatientByCode(code);
+      setCodeMiss(!found);
+      if (found) fillFrom(found);
     });
+  }
+
+  // Phone suggestions follow the typing, a beat behind it. In old mode they
+  // are the way to find someone without their code; in new mode they warn that
+  // this number is already on file, in case the patient is not new after all.
+  useEffect(() => {
+    if (patient || phoneDigits(phone) < 6) return;
+    const t = setTimeout(() => {
+      startTransition(async () => setSuggestions(await findPatientsByPhone(phone)));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [phone, patient]);
+
+  // Too few digits to search on means nothing to suggest, whatever the last
+  // search found.
+  const shown = !patient && phoneDigits(phone) >= 6 ? suggestions : [];
+
+  /** From a new-patient warning: this is actually someone already on file. */
+  function pickExisting(p: PatientRecord) {
+    setMode("old");
+    fillFrom(p);
   }
 
   /**
@@ -206,7 +284,6 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
           <button
             type="button"
             onClick={() => {
-              setMatch(null);
               setFormKey((k) => k + 1);
               window.location.reload();
             }}
@@ -214,13 +291,6 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
           >
             Check in another patient
           </button>
-          <Link
-            href={`/super-admin/print/${s.visitId}`}
-            target="_blank"
-            className={btnGhost}
-          >
-            Print slip
-          </Link>
         </div>
       </div>
     );
@@ -237,7 +307,113 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
         hint="Goes to the nurse for vitals, then on to the doctor."
       />
 
+      {/* New or old comes first: it decides whether the desk types the
+          details in or pulls them from the record. */}
+      <fieldset className="mt-5">
+        <legend className={label}>Patient</legend>
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:max-w-sm">
+          {(["new", "old"] as const).map((m) => (
+            <label
+              key={m}
+              className="flex cursor-pointer items-center gap-2 rounded-control border border-hairline px-3 py-2.5 text-sm font-semibold has-[:checked]:border-primary/50 has-[:checked]:bg-primary/8 has-[:checked]:text-primary"
+            >
+              <input
+                type="radio"
+                name="patient_mode"
+                value={m}
+                checked={mode === m}
+                onChange={() => switchMode(m)}
+                className="accent-[var(--primary)]"
+              />
+              {m === "new" ? "New patient" : "Old patient"}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {mode === "old" && !patient && (
+        <div className="mt-5 space-y-5 rounded-control border border-hairline bg-subtle/40 p-4">
+          <div>
+            <label htmlFor="patient_code" className={label}>
+              Patient code
+            </label>
+            <div className="mt-1.5 flex gap-2">
+              <input
+                id="patient_code"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setCodeMiss(false);
+                }}
+                onKeyDown={(e) => {
+                  // Enter looks the code up rather than submitting the form.
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onFindByCode();
+                  }
+                }}
+                placeholder="DS-P-00007"
+                className={`${fieldBase} font-mono uppercase`}
+              />
+              <button type="button" onClick={onFindByCode} className={btnPrimary}>
+                Find
+              </button>
+            </div>
+            {codeMiss && (
+              <p className="mt-1.5 text-xs text-danger">
+                No patient has that code. Check it, or search by phone below.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="lookup_phone" className={label}>
+              No code? Search by phone number
+            </label>
+            <input
+              id="lookup_phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="01711 744427"
+              className={field}
+            />
+            {shown.length > 0 ? (
+              <div className="mt-2 space-y-1.5">
+                <p className="text-xs text-muted">Pick the patient:</p>
+                {shown.map((p) => (
+                  <PatientOption key={p.id} patient={p} onPick={fillFrom} />
+                ))}
+              </div>
+            ) : (
+              phoneDigits(phone) >= 6 && (
+                <p className="mt-1.5 text-xs text-muted">
+                  No patient on file with that number.
+                </p>
+              )
+            )}
+          </div>
+        </div>
+      )}
+
+      {(mode === "new" || patient) && (
+      <>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        {patient && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-primary/35 bg-primary/8 px-3.5 py-2.5 text-sm text-primary sm:col-span-2">
+            <span>
+              <span className="font-mono font-bold">{patient.patient_code}</span> ·{" "}
+              {patient.visitCount} previous{" "}
+              {patient.visitCount === 1 ? "visit" : "visits"}. This visit goes on the
+              same record.
+            </span>
+            <button type="button" onClick={() => switchMode("old")} className={btnQuiet}>
+              Change patient
+            </button>
+            <input type="hidden" name="patient_id" value={patient.id} />
+          </div>
+        )}
+
         <div className="sm:col-span-2">
           <label htmlFor="full_name" className={label}>
             Patient name
@@ -246,10 +422,11 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             id="full_name"
             name="full_name"
             required
+            readOnly={Boolean(patient)}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Farhana Islam"
-            className={field}
+            className={`${field} ${locked}`}
           />
         </div>
 
@@ -262,17 +439,23 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             name="phone"
             type="tel"
             required
-            onBlur={onPhoneBlur}
+            readOnly={Boolean(patient)}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
             placeholder="01711 744427"
-            className={field}
+            className={`${field} ${locked}`}
           />
-          {match && (
-            <p className="mt-1.5 rounded-control border border-primary/35 bg-primary/8 px-3 py-2 text-xs text-primary">
-              Returning patient — {match.full_name} · {match.patient_code} ·{" "}
-              {match.visitCount} previous{" "}
-              {match.visitCount === 1 ? "visit" : "visits"}. Their history stays
-              under the same code.
-            </p>
+          {mode === "new" && shown.length > 0 && (
+            <div className="mt-2 space-y-1.5 rounded-control border border-warn/40 bg-warn/10 p-3">
+              <p className="text-xs text-warn">
+                This number is already on file. If the patient is one of these,
+                pick them — their history stays under the same code. Otherwise
+                carry on as a new patient.
+              </p>
+              {shown.map((p) => (
+                <PatientOption key={p.id} patient={p} onPick={pickExisting} />
+              ))}
+            </div>
           )}
         </div>
 
@@ -287,9 +470,10 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             required
             min="1890-01-02"
             max={clinicToday()}
+            readOnly={Boolean(patient?.date_of_birth)}
             value={dob}
             onChange={(e) => setDob(e.target.value)}
-            className={field}
+            className={`${field} ${locked}`}
           />
         </div>
 
@@ -301,8 +485,11 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             id="email"
             name="email"
             type="email"
+            readOnly={Boolean(patient?.email)}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="farhana@example.com"
-            className={field}
+            className={`${field} ${locked}`}
           />
         </div>
 
@@ -310,10 +497,23 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
           <label htmlFor="address" className={label}>
             Address <span className="text-muted">(optional)</span>
           </label>
-          <input id="address" name="address" className={field} />
+          <input
+            id="address"
+            name="address"
+            readOnly={Boolean(patient?.address)}
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className={`${field} ${locked}`}
+          />
         </div>
 
-        <CheckboxGroup name="skin_types" legend="Skin type" options={SKIN_TYPES} />
+        <CheckboxGroup
+          key={patient?.id ?? "new"}
+          name="skin_types"
+          legend="Skin type"
+          options={SKIN_TYPES}
+          defaultValues={patient?.lastSkinTypes}
+        />
 
         <CheckboxGroup
           name="skin_conditions"
@@ -416,6 +616,8 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
       <div className="mt-6">
         <SubmitButton />
       </div>
+      </>
+      )}
     </form>
   );
 }

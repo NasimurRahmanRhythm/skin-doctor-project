@@ -3,25 +3,32 @@ import { card, cardPad, Code, EmptyState, SectionHead } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { clinicDayRange, formatClinicTime, patientAge } from "@/lib/clinic";
 import { SKIN_CONDITIONS, skinLabels } from "@/lib/skin";
+import VisitSearch from "@/components/visit-search";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function DoctorQueuePage() {
+export default async function DoctorQueuePage({
+  searchParams,
+}: PageProps<"/super-admin/doctor">) {
   const staff = await requireRole("doctor");
+  const sp = await searchParams;
   const supabase = await createClient();
   const { start } = clinicDayRange();
 
-  // RLS already limits this to visits assigned to this doctor.
+  // Filtered to this doctor explicitly: RLS also lets a doctor read other
+  // doctors' visits for patients they share, and those are not their queue.
   const [{ data: waiting }, { data: done }] = await Promise.all([
     supabase
       .from("visits")
       .select(
         "id, visit_code, visit_type, chief_complaint, skin_conditions, intake_notes, created_at, vitals_at, blood_pressure, patients(full_name, patient_code, age, date_of_birth)",
       )
+      .eq("doctor_id", staff.id)
       .eq("status", "awaiting_doctor")
       .order("vitals_at", { ascending: true }),
     supabase
       .from("visits")
       .select("id, visit_code, completed_at, patients(full_name)")
+      .eq("doctor_id", staff.id)
       .eq("status", "completed")
       .gte("created_at", start)
       .order("completed_at", { ascending: false }),
@@ -128,6 +135,8 @@ export default async function DoctorQueuePage() {
           </ul>
         </section>
       )}
+
+      <VisitSearch searchParams={sp} basePath="/super-admin/doctor" doctorId={staff.id} />
     </div>
   );
 }

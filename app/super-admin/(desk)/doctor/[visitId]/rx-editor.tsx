@@ -24,7 +24,9 @@ import {
   type Duration,
   type Investigation,
   type Medicine,
+  type MedicineKind,
   type PadData,
+  type TabletMedicine,
 } from "@/lib/prescription";
 import { savePad } from "../actions";
 
@@ -194,7 +196,11 @@ function LineList({
 
 // --------------------------------------------------------- investigations --
 
-/** Test name, then its result. Enter on the name moves to the result. */
+/**
+ * The tests to order, one per line. No result box: results come back after
+ * the visit, not while the pad is being written. A result an older visit
+ * already has is kept as it is.
+ */
 function InvestigationList({
   items,
   onChange,
@@ -205,46 +211,33 @@ function InvestigationList({
   addRef: RefObject<HTMLInputElement | null>;
 }) {
   const [name, setName] = useState("");
-  const [result, setResult] = useState("");
-  const resultRef = useRef<HTMLInputElement>(null);
 
   function add() {
     const n = name.trim();
     if (!n) return;
-    onChange([...items, { name: n, result: result.trim() }]);
+    onChange([...items, { name: n }]);
     setName("");
-    setResult("");
-    addRef.current?.focus();
   }
-
-  const update = (i: number, patch: Partial<Investigation>) =>
-    onChange(items.map((v, j) => (j === i ? { ...v, ...patch } : v)));
 
   return (
     <div>
       {items.length > 0 && (
-        <ul className="mb-2 space-y-1.5">
+        <ul className="mb-2 space-y-0.5">
           {items.map((t, i) => (
             <li key={i} className="flex items-start gap-1.5">
-              <span className="w-4 shrink-0 pt-0.5 text-center text-xs text-primary">•</span>
-              <div className="min-w-0 flex-1">
-                <InlineText
-                  value={t.name}
-                  label={`Investigation ${i + 1}`}
-                  onChange={(v) => update(i, { name: v })}
-                  onBlur={(v) => {
-                    if (!v.trim()) onChange(items.filter((_, j) => j !== i));
-                  }}
-                  className="text-[13.5px]"
-                />
-                <input
-                  value={t.result}
-                  aria-label={`Result for ${t.name}`}
-                  onChange={(e) => update(i, { result: e.target.value })}
-                  placeholder="result"
-                  className={`${inlineInput} text-xs italic text-muted placeholder:not-italic placeholder:text-muted/50`}
-                />
-              </div>
+              <span className="w-4 shrink-0 pt-1 text-center text-xs text-primary">•</span>
+              <InlineText
+                value={t.name}
+                label={`Investigation ${i + 1}`}
+                onChange={(v) =>
+                  onChange(items.map((x, j) => (j === i ? { ...x, name: v } : x)))
+                }
+                onBlur={(v) => {
+                  if (!v.trim()) onChange(items.filter((_, j) => j !== i));
+                }}
+                onEnterKey={() => addRef.current?.focus()}
+                className="text-[13.5px]"
+              />
               <RemoveButton
                 label={`Remove ${t.name}`}
                 onClick={() => onChange(items.filter((_, j) => j !== i))}
@@ -253,28 +246,15 @@ function InvestigationList({
           ))}
         </ul>
       )}
-      <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-2">
-        <input
-          ref={addRef}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) =>
-            onEnter(e, () => {
-              if (name.trim()) resultRef.current?.focus();
-            })
-          }
-          placeholder="Test, e.g. S. Creatinine"
-          className={addInput}
-        />
-        <input
-          ref={resultRef}
-          value={result}
-          onChange={(e) => setResult(e.target.value)}
-          onKeyDown={(e) => onEnter(e, add)}
-          placeholder="Result ↵"
-          className={addInput}
-        />
-      </div>
+      <input
+        ref={addRef}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => onEnter(e, add)}
+        onBlur={add}
+        placeholder="Test, e.g. S. Creatinine — press Enter"
+        className={addInput}
+      />
     </div>
   );
 }
@@ -317,10 +297,10 @@ function MealToggle({
   value,
   onChange,
 }: {
-  value: Medicine["meal"];
-  onChange: (v: Medicine["meal"]) => void;
+  value: TabletMedicine["meal"];
+  onChange: (v: TabletMedicine["meal"]) => void;
 }) {
-  const opt = (v: Medicine["meal"], label: string) => (
+  const opt = (v: TabletMedicine["meal"], label: string) => (
     <button
       type="button"
       onClick={() => onChange(v)}
@@ -395,6 +375,8 @@ function MedicineList({
   addRef: RefObject<HTMLInputElement | null>;
 }) {
   const [draft, setDraft] = useState("");
+  // What the next medicine added will be. A non-tablet is just its name.
+  const [kind, setKind] = useState<MedicineKind>("tablet");
   // First dose box of each row, so a new medicine lands the cursor on its dose.
   const firstDose = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -402,14 +384,16 @@ function MedicineList({
     const name = draft.trim();
     if (!name) return;
     const row = items.length;
-    onChange([...items, emptyMedicine(name)]);
+    onChange([...items, emptyMedicine(name, kind)]);
     setDraft("");
-    // The row exists after the next paint.
-    requestAnimationFrame(() => firstDose.current[row]?.focus());
+    // A tablet goes straight to its dose; a non-tablet has none, so the cursor
+    // stays in the add box for the next one. The row exists after the paint.
+    if (kind === "tablet") requestAnimationFrame(() => firstDose.current[row]?.focus());
   }
 
-  const update = (i: number, patch: Partial<Medicine>) =>
-    onChange(items.map((m, j) => (j === i ? { ...m, ...patch } : m)));
+  /** Only a tablet has schedule fields to change. */
+  const update = (i: number, patch: Partial<TabletMedicine>) =>
+    onChange(items.map((m, j) => (j === i ? ({ ...m, ...patch } as Medicine) : m)));
 
   const move = (i: number, by: -1 | 1) => {
     const j = i + by;
@@ -439,7 +423,11 @@ function MedicineList({
                   onBlur={(v) => {
                     if (!v.trim()) onChange(items.filter((_, j) => j !== i));
                   }}
-                  onEnterKey={() => firstDose.current[i]?.focus()}
+                  onEnterKey={() =>
+                    m.kind === "other"
+                      ? addRef.current?.focus()
+                      : firstDose.current[i]?.focus()
+                  }
                   className="text-[15px] font-semibold"
                 />
                 <div className="flex shrink-0 items-center opacity-0 transition-ui group-hover:opacity-100 group-focus-within:opacity-100">
@@ -470,6 +458,7 @@ function MedicineList({
                 />
               </div>
 
+              {m.kind !== "other" && (
               <div className="mt-1.5 flex flex-wrap items-center gap-y-2 pl-7">
                 <div className="flex shrink-0 items-center gap-1 text-sm font-semibold text-muted">
                   {m.dose.map((d, k) => (
@@ -482,7 +471,7 @@ function MedicineList({
                           k === 0 ? (el) => void (firstDose.current[i] = el) : undefined
                         }
                         onChange={(v) => {
-                          const dose = [...m.dose] as Medicine["dose"];
+                          const dose = [...m.dose] as TabletMedicine["dose"];
                           dose[k] = v;
                           update(i, { dose });
                         }}
@@ -498,18 +487,51 @@ function MedicineList({
                   onChange={(duration) => update(i, { duration })}
                 />
               </div>
+              )}
             </li>
           ))}
         </ol>
       )}
 
+      <div
+        role="radiogroup"
+        aria-label="Kind of medicine to add"
+        className="mb-2 inline-flex rounded-control border border-hairline bg-subtle p-0.5"
+      >
+        {(
+          [
+            ["tablet", "Tablet"],
+            ["other", "Non-tablet"],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            role="radio"
+            aria-checked={kind === k}
+            onClick={() => {
+              setKind(k);
+              addRef.current?.focus();
+            }}
+            className={`rounded-[7px] px-3 py-1 text-xs font-semibold transition-ui ${
+              kind === k ? "bg-primary text-on-primary shadow-card" : "text-muted hover:text-fg"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="flex gap-2">
         <input
           ref={addRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => onEnter(e, add)}
-          placeholder="Medicine, e.g. Tab. Cetirizine 10 mg — press Enter"
+          placeholder={
+            kind === "tablet"
+              ? "Medicine, e.g. Tab. Cetirizine 10 mg — press Enter"
+              : "e.g. Sunscreen SPF 50, apply twice daily — press Enter"
+          }
           className={`${addInput} text-sm`}
         />
         <button

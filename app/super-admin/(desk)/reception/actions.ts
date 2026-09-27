@@ -8,39 +8,79 @@ import { clinicToday } from "@/lib/clinic";
 import { SKIN_CONDITION_VALUES, SKIN_TYPE_VALUES } from "@/lib/skin";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/uploads";
 
-export type PatientMatch = {
+/** A patient on file, with what the desk needs to fill the form from it. */
+export type PatientRecord = {
   id: string;
   patient_code: string;
   full_name: string;
+  phone: string;
   date_of_birth: string | null;
+  email: string | null;
+  address: string | null;
   visitCount: number;
-} | null;
+  /** Skin type rarely changes, so the last visit's answer is offered again. */
+  lastSkinTypes: string[];
+};
 
-/**
- * Looks a patient up by phone so the desk can see, before submitting, that
- * this is someone the clinic already knows. Prevents a second patient record
- * for the same person, which would split their history in two.
- */
-export async function lookupPatient(phone: string): Promise<PatientMatch> {
+const PATIENT_FIELDS = "id, patient_code, full_name, phone, date_of_birth, email, address";
+
+async function withHistory(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  patients: Omit<PatientRecord, "visitCount" | "lastSkinTypes">[],
+): Promise<PatientRecord[]> {
+  return Promise.all(
+    patients.map(async (p) => {
+      const { data: visits, count } = await supabase
+        .from("visits")
+        .select("skin_types", { count: "exact" })
+        .eq("patient_id", p.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      return {
+        ...p,
+        visitCount: count ?? 0,
+        lastSkinTypes: (visits?.[0]?.skin_types as string[] | null) ?? [],
+      };
+    }),
+  );
+}
+
+/** An old patient, by the code on their slip or prescription. */
+export async function findPatientByCode(code: string): Promise<PatientRecord | null> {
   await requireRole("receptionist");
-  const trimmed = phone.trim();
-  if (trimmed.length < 6) return null;
+  const trimmed = code.trim().toUpperCase();
+  if (trimmed.length < 3) return null;
 
   const supabase = await createClient();
-  const { data: patient } = await supabase
+  const { data } = await supabase
     .from("patients")
-    .select("id, patient_code, full_name, date_of_birth")
-    .eq("phone", trimmed)
+    .select(PATIENT_FIELDS)
+    .eq("patient_code", trimmed)
     .maybeSingle();
 
-  if (!patient) return null;
+  if (!data) return null;
+  const [record] = await withHistory(supabase, [data]);
+  return record;
+}
 
-  const { count } = await supabase
-    .from("visits")
-    .select("id", { count: "exact", head: true })
-    .eq("patient_id", patient.id);
+/**
+ * Patients on file under a phone number. More than one is normal: a family
+ * often shares a phone, so the desk picks the right person from the list.
+ */
+export async function findPatientsByPhone(phone: string): Promise<PatientRecord[]> {
+  await requireRole("receptionist");
+  const trimmed = phone.trim();
+  if (trimmed.replace(/\D/g, "").length < 6) return [];
 
-  return { ...patient, visitCount: count ?? 0 };
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("patients")
+    .select(PATIENT_FIELDS)
+    .ilike("phone", `%${trimmed}%`)
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  return withHistory(supabase, data ?? []);
 }
 
 /** Blank inputs arrive as "" (or null when not rendered); both mean "not given". */
@@ -67,6 +107,8 @@ const checkInSchema = z.object({
   skin_types: z.array(z.enum(SKIN_TYPE_VALUES)),
   skin_conditions: z.array(z.enum(SKIN_CONDITION_VALUES)),
   notes: optionalText,
+  // Set when the desk picked an old patient; absent for a new one.
+  patient_id: z.uuid().nullish().catch(null),
   // "any" means no preference: the database picks the least-loaded doctor.
   preferred_doctor: z.union([z.literal("any"), z.uuid()]).catch("any"),
 });
@@ -164,6 +206,7 @@ export async function checkIn(
     skin_types: formData.getAll("skin_types"),
     skin_conditions: formData.getAll("skin_conditions"),
     notes: formData.get("notes"),
+    patient_id: formData.get("patient_id") || null,
     preferred_doctor: formData.get("preferred_doctor"),
   });
 
@@ -182,16 +225,27 @@ export async function checkIn(
 
   const supabase = await createClient();
 
-  // New vs returning is decided by the phone number on record, not by what the
-  // desk ticked. The number is the only evidence we actually have, and it keeps
-  // one person from ending up with two patient codes.
-  const { data: existing, error: lookupError } = await supabase
-    .from("patients")
-    .select("id, patient_code, date_of_birth, email, address")
-    .eq("phone", input.phone)
-    .maybeSingle();
+  // Old or new is the desk's call. An old patient comes with the exact record
+  // the desk picked — a phone alone cannot say which one, since a family may
+  // share it. A new patient always gets a record of their own.
+  let existing: {
+    id: string;
+    patient_code: string;
+    date_of_birth: string | null;
+    email: string | null;
+    address: string | null;
+  } | null = null;
 
-  if (lookupError) return { error: lookupError.message };
+  if (input.patient_id) {
+    const { data, error: lookupError } = await supabase
+      .from("patients")
+      .select("id, patient_code, date_of_birth, email, address")
+      .eq("id", input.patient_id)
+      .maybeSingle();
+    if (lookupError) return { error: lookupError.message };
+    if (!data) return { error: "That patient could not be found. Look them up again." };
+    existing = data;
+  }
 
   let patientId: string;
   let patientCode: string;

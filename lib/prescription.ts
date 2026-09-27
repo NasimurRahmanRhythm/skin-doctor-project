@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CLINIC_TZ, clinicToday } from "@/lib/clinic";
 import { SKIN_CONDITIONS, SKIN_TYPES, skinLabels } from "@/lib/skin";
+import { bmiLabel } from "@/lib/vitals";
 
 /**
  * The prescription pad: what the doctor writes, in the shape it prints.
@@ -16,7 +17,14 @@ export type Duration =
   | { unit: "continue" }
   | { unit: "days" | "weeks" | "months"; count: number };
 
-export type Medicine = {
+/**
+ * A tablet carries a schedule: dose, meal and duration. Anything else — a
+ * cream, a face wash, a sunscreen — is just its name; how to use it goes in
+ * the name or in Advice. Medicines saved before the split have no `kind` and
+ * are tablets.
+ */
+export type TabletMedicine = {
+  kind?: "tablet";
   name: string;
   /** Morning + noon + night. Strings, so "½" is a valid dose. */
   dose: [string, string, string];
@@ -24,7 +32,17 @@ export type Medicine = {
   duration: Duration;
 };
 
-export type Investigation = { name: string; result: string };
+export type OtherMedicine = { kind: "other"; name: string };
+
+export type Medicine = TabletMedicine | OtherMedicine;
+
+export type MedicineKind = "tablet" | "other";
+
+/**
+ * A test the doctor orders. Results are no longer written on the pad; older
+ * visits may still carry one, and it is kept and shown.
+ */
+export type Investigation = { name: string; result?: string };
 
 export type PadData = {
   complaints: string[];
@@ -39,18 +57,27 @@ export type PadData = {
 const line = z.string().trim().min(1).max(300);
 const doseSlot = z.string().trim().max(4);
 
-export const medicineSchema = z.object({
-  name: z.string().trim().min(1, "Every medicine needs a name.").max(200),
-  dose: z.tuple([doseSlot, doseSlot, doseSlot]),
-  meal: z.enum(["after", "before"]),
-  duration: z.discriminatedUnion("unit", [
-    z.object({ unit: z.literal("continue") }),
-    z.object({
-      unit: z.enum(["days", "weeks", "months"]),
-      count: z.number().int().min(1).max(365),
-    }),
-  ]),
-});
+const medicineName = z.string().trim().min(1, "Every medicine needs a name.").max(200);
+
+// The non-tablet shape is tried first: it is the one that says so outright.
+// Anything else — including every medicine saved before `kind` existed — must
+// be a tablet with a full schedule.
+export const medicineSchema = z.union([
+  z.object({ kind: z.literal("other"), name: medicineName }),
+  z.object({
+    kind: z.literal("tablet").optional(),
+    name: medicineName,
+    dose: z.tuple([doseSlot, doseSlot, doseSlot]),
+    meal: z.enum(["after", "before"]),
+    duration: z.discriminatedUnion("unit", [
+      z.object({ unit: z.literal("continue") }),
+      z.object({
+        unit: z.enum(["days", "weeks", "months"]),
+        count: z.number().int().min(1).max(365),
+      }),
+    ]),
+  }),
+]);
 
 export const padSchema = z.object({
   complaints: z.array(line).max(50),
@@ -59,7 +86,7 @@ export const padSchema = z.object({
     .array(
       z.object({
         name: line,
-        result: z.string().trim().max(200),
+        result: z.string().trim().max(200).optional(),
       }),
     )
     .max(50),
@@ -81,6 +108,7 @@ export type PadSource = {
   weight_kg: number | string | null;
   blood_pressure: string | null;
   blood_sugar: number | string | null;
+  pulse?: number | string | null;
   skin_types: string[] | null;
   skin_conditions: string[] | null;
   // older visits, written before the pad existed
@@ -89,7 +117,7 @@ export type PadSource = {
 
 export const PAD_COLUMNS =
   "complaints, examinations, investigations, advices, medicines, " +
-  "height_cm, weight_kg, blood_pressure, blood_sugar, skin_types, skin_conditions, " +
+  "height_cm, weight_kg, blood_pressure, blood_sugar, pulse, skin_types, skin_conditions, " +
   "diagnosis, prescription, advice";
 
 /** Numeric columns come back from PostgREST as strings; "66.00" reads badly. */
@@ -105,9 +133,13 @@ export function examinationsFromVitals(v: PadSource): string[] {
   const w = num(v.weight_kg);
   const h = num(v.height_cm);
   const s = num(v.blood_sugar);
+  const p = num(v.pulse ?? null);
+  const b = bmiLabel(v.height_cm, v.weight_kg);
   if (w) out.push(`Weight: ${w} kg`);
   if (h) out.push(`Height: ${h} cm`);
+  if (b) out.push(`BMI: ${b}`);
   if (v.blood_pressure) out.push(`BP: ${v.blood_pressure} mmHg`);
+  if (p) out.push(`Pulse: ${p} bpm`);
   if (s) out.push(`Blood sugar: ${s} mg/dL`);
   const skin = skinLabels(v.skin_types, SKIN_TYPES);
   if (skin) out.push(`Skin type: ${skin}`);
@@ -144,11 +176,11 @@ export function readPad(v: PadSource): PadData {
 
 // ------------------------------------------------------------ formatting --
 
-export function formatDose(dose: Medicine["dose"]): string {
+export function formatDose(dose: TabletMedicine["dose"]): string {
   return dose.map((d) => d.trim() || "0").join(" + ");
 }
 
-export const MEAL_LABEL: Record<Medicine["meal"], string> = {
+export const MEAL_LABEL: Record<TabletMedicine["meal"], string> = {
   after: "After meal",
   before: "Before meal",
 };
@@ -175,8 +207,10 @@ export function ageLabel(p: {
   return rest ? `${years} Yrs ${rest} M` : `${years} Yrs`;
 }
 
-export function emptyMedicine(name: string): Medicine {
+export function emptyMedicine(name: string, kind: MedicineKind = "tablet"): Medicine {
+  if (kind === "other") return { kind, name };
   return {
+    kind,
     name,
     dose: ["0", "0", "0"],
     meal: "after",

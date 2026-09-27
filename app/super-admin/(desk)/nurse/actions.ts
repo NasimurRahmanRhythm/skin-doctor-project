@@ -17,11 +17,16 @@ const number = (min: number, max: number, label: string, required: boolean) =>
       message: `Enter a sensible ${label}.`,
     });
 
-// The nurse desk takes four readings; only blood sugar may be skipped.
+// Height, weight and blood pressure are required; blood sugar and pulse may
+// be skipped. BMI is not taken — it is worked out from height and weight.
 const vitalsSchema = z.object({
   height_cm: number(30, 250, "height", true),
   weight_kg: number(1, 400, "weight", true),
   blood_sugar: number(20, 800, "blood sugar", false),
+  pulse: number(20, 250, "pulse", false).refine(
+    (v) => v === null || Number.isInteger(v),
+    { message: "Pulse is a whole number of beats per minute." },
+  ),
   blood_pressure: z
     .string()
     .trim()
@@ -47,6 +52,7 @@ export async function saveVitals(
     weight_kg: formData.get("weight_kg"),
     blood_pressure: formData.get("blood_pressure"),
     blood_sugar: formData.get("blood_sugar"),
+    pulse: formData.get("pulse"),
   });
 
   if (!parsed.success) {
@@ -66,6 +72,7 @@ export async function saveVitals(
       weight_kg: v.weight_kg,
       blood_pressure: v.blood_pressure,
       blood_sugar: v.blood_sugar,
+      pulse: v.pulse,
       nurse_id: staff.id,
       status: "awaiting_doctor",
     })

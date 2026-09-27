@@ -29,4 +29,5 @@ export async function markAllRead() {
 
   revalidatePath("/super-admin/nurse");
   revalidatePath("/super-admin/doctor");
+  revalidatePath("/super-admin/reception");
 }

@@ -5,6 +5,7 @@ import {
   MEAL_LABEL,
   type Investigation,
   type Medicine,
+  type PadData,
 } from "@/lib/prescription";
 
 /**
@@ -254,6 +255,7 @@ export function ReadInvestigations({ items }: { items: Investigation[] }) {
       {items.map((t, i) => (
         <li key={i}>
           {t.name}
+          {/* Only older visits have a result; the pad no longer asks for one. */}
           {t.result && (
             <span className="block text-xs italic text-muted">{t.result}</span>
           )}
@@ -280,15 +282,55 @@ export function ReadMedicines({ items }: { items: Medicine[] }) {
             <span className="w-5 shrink-0 text-right text-muted">{i + 1}.</span>
             <span>{m.name}</span>
           </div>
-          <div className="mt-0.5 flex items-end pl-7 text-[13px]">
-            <span className="font-semibold tabular-nums">{formatDose(m.dose)}</span>
-            <Leader />
-            <span>{MEAL_LABEL[m.meal]}</span>
-            <Leader />
-            <span className="font-medium">{formatDuration(m.duration)}</span>
-          </div>
+          {m.kind !== "other" && (
+            <div className="mt-0.5 flex items-end pl-7 text-[13px]">
+              <span className="font-semibold tabular-nums">{formatDose(m.dose)}</span>
+              <Leader />
+              <span>{MEAL_LABEL[m.meal]}</span>
+              <Leader />
+              <span className="font-medium">{formatDuration(m.duration)}</span>
+            </div>
+          )}
         </li>
       ))}
     </ol>
+  );
+}
+
+/**
+ * A written pad, compact and read-only: the notes on the left, the Rx on the
+ * right. For looking back at a visit, not for printing — print has the sheet.
+ */
+export function PadSummary({ pad }: { pad: PadData }) {
+  const head = "block text-[11px] font-bold uppercase tracking-wider text-accent";
+  return (
+    <div className="grid gap-6 md:grid-cols-[2fr_3fr]">
+      <div className="space-y-4">
+        {pad.complaints.length > 0 && (
+          <div>
+            <span className={head}>Chief complaint</span>
+            <div className="mt-1.5"><ReadBullets items={pad.complaints} /></div>
+          </div>
+        )}
+        {pad.investigations.length > 0 && (
+          <div>
+            <span className={head}>Investigation</span>
+            <div className="mt-1.5"><ReadInvestigations items={pad.investigations} /></div>
+          </div>
+        )}
+        {pad.advices.length > 0 && (
+          <div>
+            <span className={head}>Advice</span>
+            <div className="mt-1.5"><ReadNumbered items={pad.advices} /></div>
+          </div>
+        )}
+      </div>
+      {pad.medicines.length > 0 && (
+        <div>
+          <span className={head}>Rx</span>
+          <div className="mt-1.5"><ReadMedicines items={pad.medicines} /></div>
+        </div>
+      )}
+    </div>
   );
 }

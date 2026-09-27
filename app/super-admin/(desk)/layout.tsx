@@ -10,9 +10,9 @@ export default async function DeskLayout({
 }: LayoutProps<"/super-admin">) {
   const staff = await requireStaff();
 
-  // Only the nurse and doctor desks receive hand-offs, so only they open a
-  // realtime channel.
-  const wantsAlerts = staff.role === "nurse" || staff.role === "doctor";
+  // The nurse and doctor desks receive hand-offs, and reception hears when a
+  // visit it checked in is completed, so those three open a realtime channel.
+  const wantsAlerts = staff.role !== "owner";
   let unread: {
     id: string;
     visit_id: string | null;
