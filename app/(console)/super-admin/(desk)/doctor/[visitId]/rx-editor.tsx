@@ -61,7 +61,7 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
 }
 
 /** The + beside a heading: jumps to that section's add box. */
-function PlusButton({ label, target }: { label: string; target: RefObject<HTMLInputElement | null> }) {
+function PlusButton({ label, target }: { label: string; target: RefObject<HTMLElement | null> }) {
   return (
     <button
       type="button"
@@ -82,6 +82,9 @@ function PlusButton({ label, target }: { label: string; target: RefObject<HTMLIn
  * sideways: a textarea sized to its content, where Enter never makes a
  * newline. (field-sizing is Chromium-only; elsewhere it is one row that
  * scrolls, which still works.)
+ *
+ * `multiline` makes it a small block of text instead: Enter starts a new line,
+ * and Ctrl/Cmd+Enter does what Enter does everywhere else.
  */
 function InlineText({
   value,
@@ -90,6 +93,7 @@ function InlineText({
   onBlur,
   label,
   placeholder,
+  multiline = false,
   className = "",
 }: {
   value: string;
@@ -98,6 +102,7 @@ function InlineText({
   onBlur?: (v: string) => void;
   label: string;
   placeholder?: string;
+  multiline?: boolean;
   className?: string;
 }) {
   return (
@@ -106,12 +111,14 @@ function InlineText({
       value={value}
       aria-label={label}
       placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value.replace(/\n/g, " "))}
+      onChange={(e) =>
+        onChange(multiline ? e.target.value : e.target.value.replace(/\n/g, " "))
+      }
       onKeyDown={(e) => {
-        if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-          e.preventDefault();
-          onEnterKey?.();
-        }
+        if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+        if (multiline && !(e.ctrlKey || e.metaKey)) return;
+        e.preventDefault();
+        onEnterKey?.();
       }}
       onBlur={(e) => onBlur?.(e.target.value)}
       className={`${inlineInput} resize-none overflow-hidden leading-snug [field-sizing:content] ${className}`}
@@ -119,7 +126,7 @@ function InlineText({
   );
 }
 
-function onEnter(e: KeyboardEvent<HTMLInputElement>, run: () => void) {
+function onEnter(e: KeyboardEvent<HTMLElement>, run: () => void) {
   if (e.key === "Enter" && !e.nativeEvent.isComposing) {
     e.preventDefault();
     run();
@@ -372,10 +379,11 @@ function MedicineList({
 }: {
   items: Medicine[];
   onChange: (next: Medicine[]) => void;
-  addRef: RefObject<HTMLInputElement | null>;
+  addRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
 }) {
   const [draft, setDraft] = useState("");
-  // What the next medicine added will be. A non-tablet is just its name.
+  // What the next medicine added will be. A non-medicine is just its text,
+  // which may run to several lines.
   const [kind, setKind] = useState<MedicineKind>("tablet");
   // First dose box of each row, so a new medicine lands the cursor on its dose.
   const firstDose = useRef<(HTMLInputElement | null)[]>([]);
@@ -412,12 +420,13 @@ function MedicineList({
               key={i}
               className="group rounded-control border border-transparent px-2 py-2 -mx-2 transition-ui hover:border-hairline hover:bg-surface/80 focus-within:border-hairline focus-within:bg-surface/80"
             >
-              <div className="flex items-center gap-2">
+              <div className={`flex gap-2 ${m.kind === "other" ? "items-start" : "items-center"}`}>
                 <span className="w-5 shrink-0 text-right text-[15px] font-semibold text-muted">
                   {i + 1}.
                 </span>
                 <InlineText
                   value={m.name}
+                  multiline={m.kind === "other"}
                   label={`Medicine ${i + 1}`}
                   onChange={(v) => update(i, { name: v })}
                   onBlur={(v) => {
@@ -500,8 +509,8 @@ function MedicineList({
       >
         {(
           [
-            ["tablet", "Tablet"],
-            ["other", "Non-tablet"],
+            ["tablet", "Medicine"],
+            ["other", "Non-medicine"],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -511,7 +520,9 @@ function MedicineList({
             aria-checked={kind === k}
             onClick={() => {
               setKind(k);
-              addRef.current?.focus();
+              // The add box swaps between an input and a textarea, so focus
+              // the one that exists after the paint.
+              requestAnimationFrame(() => addRef.current?.focus());
             }}
             className={`rounded-[7px] px-3 py-1 text-xs font-semibold transition-ui ${
               kind === k ? "bg-primary text-on-primary shadow-card" : "text-muted hover:text-fg"
@@ -521,28 +532,57 @@ function MedicineList({
           </button>
         ))}
       </div>
-      <div className="flex gap-2">
-        <input
-          ref={addRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => onEnter(e, add)}
-          placeholder={
-            kind === "tablet"
-              ? "Medicine, e.g. Tab. Cetirizine 10 mg — press Enter"
-              : "e.g. Sunscreen SPF 50, apply twice daily — press Enter"
-          }
-          className={`${addInput} text-sm`}
-        />
-        <button
-          type="button"
-          onClick={add}
-          disabled={!draft.trim()}
-          className={`${btnGhost} shrink-0 px-4 py-2`}
-        >
-          Add
-        </button>
-      </div>
+      {kind === "tablet" ? (
+        <div className="flex gap-2">
+          <input
+            ref={(el) => {
+              addRef.current = el;
+            }}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => onEnter(e, add)}
+            placeholder="Medicine, e.g. Tab. Cetirizine 10 mg — press Enter"
+            className={`${addInput} text-sm`}
+          />
+          <button
+            type="button"
+            onClick={add}
+            disabled={!draft.trim()}
+            className={`${btnGhost} shrink-0 px-4 py-2`}
+          >
+            Add
+          </button>
+        </div>
+      ) : (
+        // Several lines make one entry: Enter is a new line, Save adds it.
+        <div className="flex items-end gap-2">
+          <textarea
+            ref={(el) => {
+              addRef.current = el;
+            }}
+            value={draft}
+            rows={3}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                add();
+              }
+            }}
+            placeholder={"e.g. Sunscreen SPF 50\nApply twice daily on face and neck"}
+            className={`${addInput} min-h-[4.5rem] resize-none text-sm leading-snug [field-sizing:content]`}
+          />
+          <button
+            type="button"
+            onClick={add}
+            disabled={!draft.trim()}
+            title="Save (Ctrl+Enter)"
+            className={`${btnGhost} shrink-0 px-4 py-2`}
+          >
+            Save
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -600,7 +640,8 @@ export default function RxEditor({
   const examinationsRef = useRef<HTMLInputElement>(null);
   const investigationsRef = useRef<HTMLInputElement>(null);
   const advicesRef = useRef<HTMLInputElement>(null);
-  const medicinesRef = useRef<HTMLInputElement>(null);
+  const medicinesRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const followUpRef = useRef<HTMLTextAreaElement>(null);
 
   function set<K extends keyof PadData>(key: K, value: PadData[K]) {
     setPad((p) => ({ ...p, [key]: value }));
@@ -763,24 +804,42 @@ export default function RxEditor({
           </>
         }
         right={
-          <PadSection
-            title={<RxMark />}
-            action={<PlusButton label="Add a medicine" target={medicinesRef} />}
-          >
-            {legacyPrescription && pad.medicines.length === 0 && (
-              <div className="mb-4 rounded-control border border-hairline bg-subtle px-3.5 py-2.5">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
-                  Written before the new pad
-                </p>
-                <p className="mt-1 whitespace-pre-wrap text-sm">{legacyPrescription}</p>
-              </div>
-            )}
-            <MedicineList
-              items={pad.medicines}
-              onChange={(v) => set("medicines", v)}
-              addRef={medicinesRef}
-            />
-          </PadSection>
+          <div className="space-y-7">
+            <PadSection
+              title={<RxMark />}
+              action={<PlusButton label="Add a medicine" target={medicinesRef} />}
+            >
+              {legacyPrescription && pad.medicines.length === 0 && (
+                <div className="mb-4 rounded-control border border-hairline bg-subtle px-3.5 py-2.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                    Written before the new pad
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{legacyPrescription}</p>
+                </div>
+              )}
+              <MedicineList
+                items={pad.medicines}
+                onChange={(v) => set("medicines", v)}
+                addRef={medicinesRef}
+              />
+            </PadSection>
+
+            <PadSection
+              title="Follow Up"
+              action={<PlusButton label="Write the follow-up" target={followUpRef} />}
+            >
+              {/* One block of text, saved with the rest of the pad. */}
+              <textarea
+                ref={followUpRef}
+                value={pad.followUp}
+                rows={3}
+                onChange={(e) => set("followUp", e.target.value)}
+                placeholder={"e.g. Come back after 2 weeks\nBring the previous reports"}
+                aria-label="Follow up"
+                className={`${addInput} min-h-[4.5rem] resize-none text-[13.5px] leading-snug [field-sizing:content]`}
+              />
+            </PadSection>
+          </div>
         }
       />
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { brand, cta } from "@/lib/site/content";
+import { cta } from "@/lib/site/content";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/site/gsap";
 import SplitReveal from "@/components/site/fx/SplitReveal";
 import Magnetic from "@/components/site/fx/Magnetic";
@@ -35,8 +35,6 @@ export default function Cta() {
     { scope: root }
   );
 
-  const mail = `mailto:${brand.email}?subject=${encodeURIComponent("Consultation request")}`;
-
   return (
     <section className="cta" id="cta" ref={root}>
       <div className="cta-media">
@@ -49,7 +47,7 @@ export default function Cta() {
         </SplitReveal>
         <p>{cta.body}</p>
         <Magnetic strength={0.4}>
-          <a href={mail} className="cta-orb" data-cursor="Book">
+          <a href="/inquiry" className="cta-orb" data-cursor="Book">
             <span>Book a Consultation</span>
             <Arrow width={26} />
           </a>

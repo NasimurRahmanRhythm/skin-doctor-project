@@ -58,8 +58,21 @@ export default function About() {
               <p className={i === 0 ? "about-lead" : ""}>{p}</p>
             </Reveal>
           ))}
-          <Reveal delay={0.3}>
+          <Reveal delay={0.1 + about.paragraphs.length * 0.1}>
+            <p className="about-closing">
+              {about.closing.map((line) => (
+                <span key={line}>{line}</span>
+              ))}
+            </p>
+          </Reveal>
+          <Reveal delay={0.2 + about.paragraphs.length * 0.1}>
             <div className="signature">{about.signature}</div>
+          </Reveal>
+          <Reveal delay={0.3 + about.paragraphs.length * 0.1}>
+            <p className="about-brandline">
+              <strong>{about.brandLine.name}</strong>
+              <span>{about.brandLine.tagline}</span>
+            </p>
           </Reveal>
         </div>
       </div>

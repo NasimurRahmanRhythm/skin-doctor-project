@@ -40,6 +40,7 @@ export async function savePad(
       investigations: p.investigations,
       advices: p.advices,
       medicines: p.medicines,
+      follow_up: p.followUp || null,
       ...(complete ? { status: "completed" as const } : {}),
     })
     .eq("id", visitId)

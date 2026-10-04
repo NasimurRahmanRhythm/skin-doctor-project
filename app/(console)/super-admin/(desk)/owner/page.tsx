@@ -30,6 +30,9 @@ function Stat({
   );
 }
 
+const heroLink =
+  "inline-flex items-center gap-2 rounded-control border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-bold text-hero-fg transition-ui hover:border-white/50 hover:bg-white/20";
+
 export default async function OwnerPage({
   searchParams,
 }: PageProps<"/super-admin/owner">) {
@@ -45,6 +48,12 @@ export default async function OwnerPage({
     .select("status")
     .gte("created_at", today.start)
     .lt("created_at", today.end);
+
+  // Website inquiries waiting to be read. Null until the migration has run.
+  const { count: unreadInquiries } = await supabase
+    .from("inquiries")
+    .select("id", { count: "exact", head: true })
+    .eq("is_read", false);
 
   const counts = { awaiting_vitals: 0, awaiting_doctor: 0, completed: 0 };
   for (const v of todayVisits ?? []) {
@@ -67,13 +76,24 @@ export default async function OwnerPage({
             </p>
           </div>
 
-          <Link
-            href="/super-admin/owner/staff"
-            className="inline-flex items-center gap-2 rounded-control border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-bold text-hero-fg transition-ui hover:border-white/50 hover:bg-white/20"
-          >
-            Manage staff
-            <span aria-hidden="true">→</span>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/super-admin/owner/inquiries" className={heroLink}>
+              Inquiries
+              {(unreadInquiries ?? 0) > 0 && (
+                <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-extrabold text-fg">
+                  {unreadInquiries} new
+                </span>
+              )}
+            </Link>
+            <Link href="/super-admin/owner/website" className={heroLink}>
+              Website
+              <span aria-hidden="true">→</span>
+            </Link>
+            <Link href="/super-admin/owner/staff" className={heroLink}>
+              Manage staff
+              <span aria-hidden="true">→</span>
+            </Link>
+          </div>
         </div>
 
         <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

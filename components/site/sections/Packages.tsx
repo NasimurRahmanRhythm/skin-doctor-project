@@ -1,18 +1,36 @@
 "use client";
 
 import { useRef } from "react";
-import { packages, packagesIntro } from "@/lib/site/content";
+import { packagesIntro } from "@/lib/site/content";
+import type { SitePackage } from "@/lib/site/data";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/site/gsap";
 import SplitReveal from "@/components/site/fx/SplitReveal";
 import Reveal from "@/components/site/fx/Reveal";
 import Magnetic from "@/components/site/fx/Magnetic";
 import { Arrow } from "@/components/site/Icons";
 
+const bookHref = (p: SitePackage) => `/inquiry?about=${encodeURIComponent(p.title)}`;
+
+function Head({ as = "h2" }: { as?: "h1" | "h2" }) {
+  return (
+    <div className="sec-head center">
+      <span className="kicker">{packagesIntro.kicker}</span>
+      <SplitReveal as={as} className="display">
+        {packagesIntro.title}
+      </SplitReveal>
+      <Reveal>
+        <p className="sec-lede">{packagesIntro.body}</p>
+      </Reveal>
+    </div>
+  );
+}
+
 /**
- * Three packages as a stacked deck. Each card is sticky; as the next one
- * slides over it, the one underneath sinks back and dims.
+ * The first packages as a stacked deck. Each card is sticky; as the next one
+ * slides over it, the one underneath sinks back and dims. The rest are one
+ * click away on /packages.
  */
-export default function Packages() {
+export default function Packages({ items }: { items: SitePackage[] }) {
   const root = useRef<HTMLElement>(null);
 
   useGSAP(
@@ -30,42 +48,38 @@ export default function Packages() {
         });
       });
     },
-    { scope: root }
+    { scope: root, dependencies: [items.length] }
   );
+
+  if (items.length === 0) return null;
 
   return (
     <section className="packages" id="packages" ref={root}>
       <div className="wrap">
-        <div className="sec-head center">
-          <span className="kicker">{packagesIntro.kicker}</span>
-          <SplitReveal as="h2" className="display">
-            {packagesIntro.title}
-          </SplitReveal>
-          <Reveal>
-            <p className="sec-lede">{packagesIntro.body}</p>
-          </Reveal>
-        </div>
+        <Head />
 
         <div className="pkg-stack">
-          {packages.map((p, i) => (
-            <article key={p.name} className={`pkg-card tone-${i}`} style={{ top: `calc(11vh + ${i * 22}px)` }}>
+          {items.map((p, i) => (
+            <article key={p.id} className={`pkg-card tone-${i % 3}`} style={{ top: `calc(11vh + ${i * 22}px)` }}>
               <div className="pkg-inner">
                 <div className="pkg-media" data-cursor="Book">
-                  <video src={p.video} poster={p.poster} autoPlay muted loop playsInline preload="metadata" />
+                  {p.image && (
+                    // eslint-disable-next-line @next/next/no-img-element -- owner-uploaded, any host
+                    <img src={p.image} alt="" loading="lazy" />
+                  )}
                 </div>
                 <div className="pkg-body">
                   <div className="pkg-top">
-                    <span className="pkg-tier">{p.tier}</span>
-                    <span className="pkg-num">0{i + 1} / 0{packages.length}</span>
+                    <span className="pkg-num">
+                      {String(i + 1).padStart(2, "0")} / {String(items.length).padStart(2, "0")}
+                    </span>
                   </div>
-                  <h3 className="pkg-name">{p.name}</h3>
-                  <p className="pkg-desc">{p.body}</p>
+                  <h3 className="pkg-name">{p.title}</h3>
+                  <p className="pkg-desc">{p.description}</p>
                   <div className="pkg-foot">
-                    <div className="pkg-price">
-                      {p.price} <span>{p.unit}</span>
-                    </div>
+                    {p.price ? <div className="pkg-price">{p.price}</div> : <span />}
                     <Magnetic>
-                      <a href="#cta" className="btn btn-round" aria-label={`Book ${p.name}`}>
+                      <a href={bookHref(p)} className="btn btn-round" aria-label={`Book ${p.title}`}>
                         <Arrow width={22} />
                       </a>
                     </Magnetic>
@@ -76,6 +90,51 @@ export default function Packages() {
             </article>
           ))}
         </div>
+
+        <div className="see-more">
+          <a href="/packages" className="btn btn-outline">
+            <span>See all packages</span>
+            <Arrow width={18} />
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** /packages: every package as a card grid. */
+export function PackageCatalog({ items }: { items: SitePackage[] }) {
+  return (
+    <section className="packages page-section" id="packages">
+      <div className="wrap">
+        <Head as="h1" />
+        {items.length ? (
+          <div className="card-grid">
+            {items.map((p, i) => (
+              <Reveal key={p.id} delay={Math.min(i, 6) * 0.06} className="pkg-tile">
+                <div className="pkg-tile-media">
+                  {p.image && (
+                    // eslint-disable-next-line @next/next/no-img-element -- owner-uploaded, any host
+                    <img src={p.image} alt="" loading="lazy" />
+                  )}
+                </div>
+                <div className="pkg-tile-body">
+                  <h2 className="pkg-tile-title">{p.title}</h2>
+                  <p className="pkg-tile-desc">{p.description}</p>
+                  <div className="pkg-tile-foot">
+                    {p.price ? <span className="pkg-tile-price">{p.price}</span> : <span />}
+                    <a href={bookHref(p)} className="btn btn-dark">
+                      <span>Book</span>
+                      <Arrow width={16} />
+                    </a>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        ) : (
+          <p className="page-empty">Packages will be listed here soon.</p>
+        )}
       </div>
     </section>
   );

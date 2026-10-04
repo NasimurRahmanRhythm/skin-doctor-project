@@ -50,6 +50,8 @@ export type PadData = {
   investigations: Investigation[];
   advices: string[];
   medicines: Medicine[];
+  /** Free text under the Rx: when to come back, what to bring. */
+  followUp: string;
 };
 
 // ------------------------------------------------------------ validation --
@@ -58,12 +60,14 @@ const line = z.string().trim().min(1).max(300);
 const doseSlot = z.string().trim().max(4);
 
 const medicineName = z.string().trim().min(1, "Every medicine needs a name.").max(200);
+// A non-medicine can run to several lines: a sunscreen and how to use it.
+const otherName = z.string().trim().min(1, "Every entry needs some text.").max(1000);
 
 // The non-tablet shape is tried first: it is the one that says so outright.
 // Anything else — including every medicine saved before `kind` existed — must
 // be a tablet with a full schedule.
 export const medicineSchema = z.union([
-  z.object({ kind: z.literal("other"), name: medicineName }),
+  z.object({ kind: z.literal("other"), name: otherName }),
   z.object({
     kind: z.literal("tablet").optional(),
     name: medicineName,
@@ -92,6 +96,7 @@ export const padSchema = z.object({
     .max(50),
   advices: z.array(line).max(50),
   medicines: z.array(medicineSchema).max(40),
+  followUp: z.string().trim().max(1000),
 });
 
 // --------------------------------------------------------------- reading --
@@ -103,6 +108,7 @@ export type PadSource = {
   investigations: unknown;
   advices: string[] | null;
   medicines: unknown;
+  follow_up: string | null;
   // pre-fill sources
   height_cm: number | string | null;
   weight_kg: number | string | null;
@@ -116,7 +122,7 @@ export type PadSource = {
 };
 
 export const PAD_COLUMNS =
-  "complaints, examinations, investigations, advices, medicines, " +
+  "complaints, examinations, investigations, advices, medicines, follow_up, " +
   "height_cm, weight_kg, blood_pressure, blood_sugar, pulse, skin_types, skin_conditions, " +
   "diagnosis, prescription, advice";
 
@@ -171,6 +177,7 @@ export function readPad(v: PadSource): PadData {
       safeArray(v.investigations, padSchema.shape.investigations.element) ?? [],
     advices: v.advices ?? (v.advice ? [v.advice] : []),
     medicines: safeArray(v.medicines, medicineSchema) ?? [],
+    followUp: v.follow_up ?? "",
   };
 }
 

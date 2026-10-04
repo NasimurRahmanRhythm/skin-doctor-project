@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { brand, footer } from "@/lib/site/content";
 import { Instagram } from "@/components/site/Icons";
 
-/** "Soul" takes the italic gold, echoing the script in the logo. */
+/** All gold, as in the header; "Soul" takes the italic, echoing the script in the logo. */
 const WORD = ["Derma", "Soul"];
 
 export default function Footer() {
@@ -43,9 +43,6 @@ export default function Footer() {
             <a href={`tel:${brand.phone.replace(/\s/g, "")}`} className="roll">
               <span data-text={brand.phone}>{brand.phone}</span>
             </a>
-            <a href="#portal" className="roll">
-              <span data-text="Patient Portal">Patient Portal</span>
-            </a>
           </div>
         </div>
       </div>
@@ -81,10 +78,12 @@ export default function Footer() {
   );
 }
 
-export function FabInstagram() {
+/** The floating Instagram button; not rendered until a profile is set. */
+export function FabInstagram({ url }: { url: string | null }) {
+  if (!url) return null;
   return (
     <motion.a
-      href={brand.instagram}
+      href={url}
       target="_blank"
       rel="noreferrer"
       className="fab-ig"

@@ -8,14 +8,19 @@ import { scrollToHash, setLenis } from "@/lib/site/scroll";
 /**
  * Lenis drives the scroll, GSAP's ticker drives Lenis, and ScrollTrigger
  * listens to Lenis — one clock for everything, so scrubbed animations never
- * drift from the scroll position. In-page anchors route through Lenis too.
+ * drift from the scroll position. In-page anchors route through Lenis too —
+ * including "/#packages", which is how the nav is written so that it also
+ * works from /treatments and the other pages.
  */
 export default function SmoothScroll() {
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
-      const hash = a?.getAttribute("href");
-      if (!a || !hash || hash === "#") return;
+      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"], a[href^="/#"]');
+      const href = a?.getAttribute("href");
+      if (!a || !href) return;
+      if (href.startsWith("/") && window.location.pathname !== "/") return;
+      const hash = href.replace(/^\//, "");
+      if (hash === "#") return;
       e.preventDefault();
       scrollToHash(hash);
     };

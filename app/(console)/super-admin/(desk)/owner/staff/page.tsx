@@ -13,9 +13,12 @@ import {
 } from "@/components/ui";
 import { requireRole, ROLE_LABEL, type AppRole } from "@/lib/auth";
 import { clinicDayRange } from "@/lib/clinic";
+import { publicImageUrl } from "@/lib/site-media";
 import { createClient } from "@/lib/supabase/server";
-import { setStaffActive } from "../actions";
+import { setStaffActive, setStaffDesignation, setStaffOnWebsite } from "../actions";
 import AddStaffForm from "./add-staff-form";
+import DesignationsCard from "./designations-card";
+import StaffPhotoForm from "./staff-photo-form";
 
 /** Same tiles as the dashboard, so the two owner pages read as one place. */
 function Stat({ label, value, dot }: { label: string; value: number; dot: string }) {
@@ -57,17 +60,21 @@ export default async function StaffPage() {
   const { start } = clinicDayRange();
 
   // The owner policy on public.staff is what makes the full rows readable here.
-  const [{ data: team }, { data: todayVisits }] = await Promise.all([
+  const [{ data: team }, { data: todayVisits }, { data: designationRows }] = await Promise.all([
     supabase
       .from("staff")
-      .select("id, email, full_name, role, specialty, is_active, created_at")
+      .select(
+        "id, email, full_name, role, specialty, is_active, created_at, photo_path, show_on_website",
+      )
       .order("role")
       .order("full_name"),
     supabase
       .from("visits")
       .select("receptionist_id, nurse_id, doctor_id")
       .gte("created_at", start),
+    supabase.from("designations").select("id, name").order("name"),
   ]);
+  const designations = designationRows ?? [];
 
   // How many patients each person has touched today — the reason the owner
   // opens this page is usually to see who is carrying the load.
@@ -130,14 +137,15 @@ export default async function StaffPage() {
         />
 
         <div className={`mt-5 ${tableWrap}`}>
-          <table className={`${tableEl} min-w-[720px]`}>
+          <table className={`${tableEl} min-w-[880px]`}>
             <thead>
               <tr>
                 <th className={`${thCell} rounded-tl-card`}>Name</th>
                 <th className={thCell}>Role</th>
                 <th className={thCell}>Email</th>
                 <th className={thCell}>Patients today</th>
-                <th className={`${thCell} rounded-tr-card text-right`}>Access</th>
+                <th className={thCell}>Website</th>
+                <th className={`${thCell} rounded-tr-card text-right`}>Manage</th>
               </tr>
             </thead>
             <tbody>
@@ -149,6 +157,7 @@ export default async function StaffPage() {
                   <td className={tdCell}>
                     <Person
                       name={s.full_name}
+                      photoUrl={publicImageUrl("staff-photos", s.photo_path)}
                       role={
                         s.role === "owner"
                           ? undefined
@@ -160,7 +169,36 @@ export default async function StaffPage() {
                         <span className="font-bold text-primary">you</span>
                       )}
                       {s.id === owner.id && s.specialty && " · "}
-                      {s.specialty}
+                      {s.role === "doctor" && designations.length > 0 ? (
+                        <form action={setStaffDesignation} className="inline-flex items-center gap-1">
+                          <input type="hidden" name="staff_id" value={s.id} />
+                          <select
+                            name="specialty"
+                            defaultValue={s.specialty ?? ""}
+                            aria-label={`Designation of ${s.full_name}`}
+                            className="max-w-48 rounded-md border border-transparent bg-transparent py-0.5 text-xs text-muted transition-ui hover:border-hairline focus:border-primary focus:outline-none"
+                          >
+                            {!s.specialty && <option value="">No designation</option>}
+                            {/* A designation since removed from the list is still theirs. */}
+                            {s.specialty && !designations.some((d) => d.name === s.specialty) && (
+                              <option value={s.specialty}>{s.specialty}</option>
+                            )}
+                            {designations.map((d) => (
+                              <option key={d.id} value={d.name}>
+                                {d.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="submit"
+                            className="text-[11px] font-bold text-primary underline-offset-2 hover:underline"
+                          >
+                            Save
+                          </button>
+                        </form>
+                      ) : (
+                        s.specialty
+                      )}
                     </span>
                   </td>
                   <td className={tdCell}>
@@ -170,27 +208,59 @@ export default async function StaffPage() {
                   <td className={`${tdCell} font-bold tabular`}>
                     {handled.get(s.id) ?? 0}
                   </td>
-                  <td className={`${tdCell} text-right`}>
-                    {s.id === owner.id ? (
-                      <span className="text-xs text-muted">—</span>
-                    ) : (
-                      <form action={setStaffActive}>
+                  <td className={tdCell}>
+                    {s.role === "doctor" ? (
+                      <form action={setStaffOnWebsite}>
                         <input type="hidden" name="staff_id" value={s.id} />
-                        <input
-                          type="hidden"
-                          name="active"
-                          value={s.is_active ? "0" : "1"}
-                        />
+                        <input type="hidden" name="show" value={s.show_on_website ? "0" : "1"} />
                         <button
                           type="submit"
-                          className={`${btnQuiet} ${
-                            s.is_active ? "hover:text-danger" : "hover:text-ok"
+                          title={
+                            s.show_on_website
+                              ? "Shown in the Doctors section of the website. Click to hide."
+                              : "Hidden from the website. Click to show."
+                          }
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold transition-ui ${
+                            s.show_on_website
+                              ? "border-ok/40 bg-ok/10 text-ok hover:border-ok"
+                              : "border-hairline bg-subtle text-muted hover:text-fg"
                           }`}
                         >
-                          {s.is_active ? "Deactivate" : "Reactivate"}
+                          {s.show_on_website ? "Shown" : "Hidden"}
                         </button>
                       </form>
+                    ) : (
+                      <span className="text-xs text-muted">—</span>
                     )}
+                  </td>
+                  <td className={`${tdCell} text-right`}>
+                    <div className="flex items-center justify-end gap-3">
+                      <StaffPhotoForm
+                        staffId={s.id}
+                        name={s.full_name}
+                        photoUrl={publicImageUrl("staff-photos", s.photo_path)}
+                      />
+                      {s.id === owner.id ? (
+                        <span className="text-xs text-muted">—</span>
+                      ) : (
+                        <form action={setStaffActive}>
+                          <input type="hidden" name="staff_id" value={s.id} />
+                          <input
+                            type="hidden"
+                            name="active"
+                            value={s.is_active ? "0" : "1"}
+                          />
+                          <button
+                            type="submit"
+                            className={`${btnQuiet} ${
+                              s.is_active ? "hover:text-danger" : "hover:text-ok"
+                            }`}
+                          >
+                            {s.is_active ? "Deactivate" : "Reactivate"}
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -203,7 +273,9 @@ export default async function StaffPage() {
         </p>
       </section>
 
-      <AddStaffForm />
+      <DesignationsCard designations={designations} />
+
+      <AddStaffForm designations={designations.map((d) => d.name)} />
     </div>
   );
 }

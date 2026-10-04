@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { brand, hero } from "@/lib/site/content";
+import { brand, hero, hoursLine } from "@/lib/site/content";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/site/gsap";
 import { onIntroDone } from "@/lib/site/intro";
 import SplitReveal from "@/components/site/fx/SplitReveal";
@@ -87,7 +87,7 @@ export default function Hero() {
 
         <div className="hero-actions hero-fade">
           <Magnetic>
-            <a href="#cta" className="btn btn-light">
+            <a href="/inquiry" className="btn btn-light">
               <span>Book a Consultation</span>
               <Arrow width={18} />
             </a>
@@ -99,12 +99,12 @@ export default function Hero() {
       </div>
 
       <div className="hero-foot hero-fade">
-        <span>{brand.hours[0]}</span>
+        <span>{hoursLine}</span>
         <a href="#statement" className="scroll-cue" aria-label="Scroll to discover">
           <span className="scroll-cue-line" />
           Scroll
         </a>
-        <span>{brand.address[2]}</span>
+        <span>{brand.addressLine}</span>
       </div>
 
       <span className="roam-anchor hero-roam" data-roam data-roam-scale="1.15" />

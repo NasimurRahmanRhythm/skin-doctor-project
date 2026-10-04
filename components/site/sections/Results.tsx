@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { animate, motion, useInView, useMotionValue, useMotionValueEvent, useTransform } from "motion/react";
-import { gallery, galleryIntro, results, resultsIntro } from "@/lib/site/content";
+import { resultsIntro } from "@/lib/site/content";
+import type { SiteResult } from "@/lib/site/data";
 import SplitReveal from "@/components/site/fx/SplitReveal";
 import Reveal from "@/components/site/fx/Reveal";
+import { Arrow } from "@/components/site/Icons";
 
 /**
- * Before/after comparison. Both layers are the same placeholder frame — the
- * "before" is only a desaturating filter — so the captions from the original
- * page, which say these are placeholders, stay on screen.
+ * Before/after comparison: the after photo underneath, the before photo on
+ * top, clipped at the divider. Both are real photos the owner uploads as a
+ * pair — except the seeded placeholders, which use one picture for both
+ * sides; for those the "before" is tinted so the slider still reads.
  */
-function Compare({ image, caption, index }: { image: string; caption: string; index: number }) {
+function Compare({ result, index }: { result: SiteResult; index: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const pos = useMotionValue(50);
   const clip = useTransform(pos, (p) => `inset(0 ${100 - p}% 0 0)`);
@@ -25,7 +27,7 @@ function Compare({ image, caption, index }: { image: string; caption: string; in
   // One sweep on first view, so it is obvious the divider moves.
   useEffect(() => {
     if (!inView) return;
-    const run = animate(pos, [50, 18, 82, 50], { duration: 2.4, delay: index * 0.2, ease: "easeInOut" });
+    const run = animate(pos, [50, 18, 82, 50], { duration: 2.4, delay: (index % 3) * 0.2, ease: "easeInOut" });
     return () => run.stop();
   }, [inView, index, pos]);
 
@@ -35,13 +37,15 @@ function Compare({ image, caption, index }: { image: string; caption: string; in
   };
 
   return (
-    <Reveal delay={index * 0.1}>
+    <Reveal delay={(index % 3) * 0.1}>
       <div
         ref={ref}
-        className={`ba ${dragging ? "is-dragging" : ""}`}
+        className={`ba ${dragging ? "is-dragging" : ""} ${
+          result.before === result.after ? "is-placeholder" : ""
+        }`}
         data-cursor="Drag"
         role="slider"
-        aria-label={`${caption} before and after`}
+        aria-label={`${result.title} before and after`}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={now}
@@ -59,9 +63,11 @@ function Compare({ image, caption, index }: { image: string; caption: string; in
         onPointerUp={() => setDragging(false)}
         onPointerCancel={() => setDragging(false)}
       >
-        <Image src={image} alt="" fill sizes="(max-width: 900px) 100vw, 33vw" className="ba-after" />
+        {/* eslint-disable-next-line @next/next/no-img-element -- owner-uploaded, any host */}
+        <img src={result.after} alt={`After — ${result.title}`} className="ba-after" draggable={false} />
         <motion.div className="ba-before" style={{ clipPath: clip }}>
-          <Image src={image} alt="" fill sizes="(max-width: 900px) 100vw, 33vw" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- owner-uploaded, any host */}
+          <img src={result.before} alt={`Before — ${result.title}`} draggable={false} />
         </motion.div>
         <span className="ba-tag ba-tag-l">Before</span>
         <span className="ba-tag ba-tag-r">After</span>
@@ -70,95 +76,75 @@ function Compare({ image, caption, index }: { image: string; caption: string; in
         </motion.div>
       </div>
       <div className="ba-caption">
-        <span>0{index + 1}</span>
-        {caption}
+        <span>{String(index + 1).padStart(2, "0")}</span>
+        {result.title}
       </div>
+      {result.description && <p className="ba-desc">{result.description}</p>}
     </Reveal>
   );
 }
 
-export default function Results() {
-  const track = useRef<HTMLDivElement>(null);
-  const [limit, setLimit] = useState(0);
+function Head({ as = "h2" }: { as?: "h1" | "h2" }) {
+  return (
+    <div className="sec-head split">
+      <div>
+        <span className="kicker">{resultsIntro.kicker}</span>
+        <SplitReveal as={as} className="display">
+          Transformative <em>Results</em>
+        </SplitReveal>
+      </div>
+      <Reveal className="sec-lede">
+        <p>{resultsIntro.body}</p>
+      </Reveal>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    const measure = () => {
-      const el = track.current;
-      if (el) setLimit(Math.max(0, el.scrollWidth - el.parentElement!.clientWidth));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
+function Grid({ items }: { items: SiteResult[] }) {
+  return (
+    <div className="ba-grid">
+      {items.map((r, i) => (
+        <Compare key={r.id} result={r} index={i} />
+      ))}
+    </div>
+  );
+}
+
+/** The landing page's first three sliders, and the way to the rest. */
+export default function Results({ items }: { items: SiteResult[] }) {
+  if (items.length === 0) return null;
 
   return (
     <section className="results" id="results">
       <div className="wrap">
-        <div className="sec-head split">
-          <div>
-            <span className="kicker">{resultsIntro.kicker}</span>
-            <SplitReveal as="h2" className="display">
-              Transformative <em>Results</em>
-            </SplitReveal>
-          </div>
-          <Reveal className="sec-lede">
-            <p>{resultsIntro.body}</p>
-          </Reveal>
-        </div>
-
-        <div className="ba-grid">
-          {results.map((r, i) => (
-            <Compare key={r.caption} {...r} index={i} />
-          ))}
-        </div>
+        <Head />
+        <Grid items={items} />
         <p className="fine">{resultsIntro.note}</p>
+        <div className="see-more">
+          <a href="/results" className="btn btn-outline">
+            <span>See all results</span>
+            <Arrow width={18} />
+          </a>
+        </div>
       </div>
+    </section>
+  );
+}
 
-      <div className="gallery" id="gallery">
-        <div className="wrap gallery-head">
-          <div>
-            <span className="kicker">{galleryIntro.kicker}</span>
-            <SplitReveal as="h3" className="display sm">
-              Before &amp; After <em>Gallery</em>
-            </SplitReveal>
-          </div>
-          <p className="sec-lede">{galleryIntro.body}</p>
-          <span className="roam-anchor gal-roam" data-roam data-roam-scale="0.8" />
-        </div>
-        <div className="gallery-viewport" data-cursor="Drag">
-          <motion.div
-            ref={track}
-            className="gallery-track"
-            drag="x"
-            dragConstraints={{ left: -limit, right: 0 }}
-            dragElastic={0.08}
-            dragTransition={{ power: 0.25, timeConstant: 300 }}
-          >
-            {gallery.map((src, i) => (
-              <motion.figure
-                key={src + i}
-                className="gal-tile"
-                initial={{ opacity: 0, x: 80 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, delay: i * 0.07, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <div className="gal-split">
-                  <div className="gal-half is-before">
-                    <Image src={src} alt="" fill sizes="340px" draggable={false} />
-                    <span>Before</span>
-                  </div>
-                  <div className="gal-half">
-                    <Image src={src} alt="" fill sizes="340px" draggable={false} />
-                    <span>After</span>
-                  </div>
-                </div>
-                <figcaption>Case 0{i + 1}</figcaption>
-              </motion.figure>
-            ))}
-          </motion.div>
-        </div>
-        <p className="fine wrap">{galleryIntro.note}</p>
+/** /results: every before/after slider the owner has added. */
+export function ResultCatalog({ items }: { items: SiteResult[] }) {
+  return (
+    <section className="results page-section" id="results">
+      <div className="wrap">
+        <Head as="h1" />
+        {items.length ? (
+          <>
+            <Grid items={items} />
+            <p className="fine">{resultsIntro.note}</p>
+          </>
+        ) : (
+          <p className="page-empty">Results will be shown here soon.</p>
+        )}
       </div>
     </section>
   );

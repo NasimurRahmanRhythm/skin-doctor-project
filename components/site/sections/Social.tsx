@@ -1,13 +1,17 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
-import { brand, social } from "@/lib/site/content";
+import { social } from "@/lib/site/content";
+import type { SiteInstagram } from "@/lib/site/data";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/site/gsap";
 import { Instagram, ArrowUpRight } from "@/components/site/Icons";
 
-/** Instagram strip: tiles drift at different speeds as the section passes. */
-export default function Social() {
+/**
+ * Instagram strip: tiles drift at different speeds as the section passes.
+ * Each tile is a post the owner added and opens that post; the heading and
+ * button open the profile. No profile set, no section.
+ */
+export default function Social({ data }: { data: SiteInstagram | null }) {
   const root = useRef<HTMLElement>(null);
 
   useGSAP(
@@ -25,41 +29,46 @@ export default function Social() {
         );
       });
     },
-    { scope: root }
+    { scope: root, dependencies: [data?.posts.length ?? 0] }
   );
+
+  if (!data) return null;
 
   return (
     <section className="social" id="social" ref={root}>
       <div className="wrap social-head">
         <div>
           <span className="kicker">{social.kicker}</span>
-          <a href={brand.instagram} target="_blank" rel="noreferrer" className="social-handle">
-            {brand.handle}
+          <a href={data.url} target="_blank" rel="noopener noreferrer" className="social-handle">
+            {data.handle}
           </a>
         </div>
-        <a href={brand.instagram} target="_blank" rel="noreferrer" className="btn btn-outline">
+        <a href={data.url} target="_blank" rel="noopener noreferrer" className="btn btn-outline">
           <span>View on Instagram</span>
           <ArrowUpRight width={18} />
         </a>
       </div>
-      <div className="social-grid">
-        {social.tiles.map((src, i) => (
-          <a
-            key={src}
-            href={brand.instagram}
-            target="_blank"
-            rel="noreferrer"
-            className="social-tile"
-            data-cursor="Open"
-            aria-label={`Instagram post ${i + 1}`}
-          >
-            <Image src={src} alt="" fill sizes="(max-width: 900px) 33vw, 17vw" />
-            <span className="social-over">
-              <Instagram width={26} />
-            </span>
-          </a>
-        ))}
-      </div>
+      {data.posts.length > 0 && (
+        <div className="social-grid">
+          {data.posts.map((p, i) => (
+            <a
+              key={p.id}
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="social-tile"
+              data-cursor="Open"
+              aria-label={`Instagram post ${i + 1}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- owner-uploaded, any host */}
+              <img src={p.image} alt="" loading="lazy" />
+              <span className="social-over">
+                <Instagram width={26} />
+              </span>
+            </a>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

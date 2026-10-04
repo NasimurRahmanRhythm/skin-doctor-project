@@ -116,23 +116,35 @@ const PERSON_TONE: Record<string, string> = {
 export function Person({
   name,
   role,
+  photoUrl,
   className = "",
 }: {
   name: string | null | undefined;
   role?: "receptionist" | "nurse" | "doctor";
+  /** Their profile photo; the initials stand in when there is none. */
+  photoUrl?: string | null;
   className?: string;
 }) {
   if (!name) return <span className="text-muted">—</span>;
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <span
-        aria-hidden="true"
-        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-extrabold ${
-          PERSON_TONE[role ?? ""] ?? "bg-subtle text-muted"
-        }`}
-      >
-        {initials(name)}
-      </span>
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- a 24px avatar
+        <img
+          src={photoUrl}
+          alt=""
+          className="h-6 w-6 shrink-0 rounded-full border border-hairline object-cover"
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-extrabold ${
+            PERSON_TONE[role ?? ""] ?? "bg-subtle text-muted"
+          }`}
+        >
+          {initials(name)}
+        </span>
+      )}
       <span className="truncate font-semibold">{name}</span>
     </span>
   );

@@ -4,6 +4,7 @@ import {
   PadSection,
   PadSheet,
   ReadBullets,
+  ReadFollowUp,
   ReadInvestigations,
   ReadMedicines,
   ReadNumbered,
@@ -110,15 +111,20 @@ export default async function PrintPage({
           </>
         }
         right={
-          <PadSection title={<RxMark />}>
-            {pad.medicines.length === 0 && visit.prescription ? (
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                {visit.prescription}
-              </p>
-            ) : (
-              <ReadMedicines items={pad.medicines} />
-            )}
-          </PadSection>
+          <div className="space-y-7">
+            <PadSection title={<RxMark />}>
+              {pad.medicines.length === 0 && visit.prescription ? (
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {visit.prescription}
+                </p>
+              ) : (
+                <ReadMedicines items={pad.medicines} />
+              )}
+            </PadSection>
+            <PadSection title="Follow Up">
+              <ReadFollowUp text={pad.followUp} />
+            </PadSection>
+          </div>
         }
       />
     </main>

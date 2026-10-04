@@ -1,4 +1,3 @@
-import { BagProvider } from "@/components/site/Bag";
 import SmoothScroll from "@/components/site/fx/SmoothScroll";
 import Preloader from "@/components/site/fx/Preloader";
 import Cursor from "@/components/site/fx/Cursor";
@@ -18,19 +17,48 @@ import Reviews from "@/components/site/sections/Reviews";
 import Shop from "@/components/site/sections/Shop";
 import Social from "@/components/site/sections/Social";
 import Faq from "@/components/site/sections/Faq";
-import Portal from "@/components/site/sections/Portal";
 import Cta from "@/components/site/sections/Cta";
 import Footer, { FabInstagram } from "@/components/site/sections/Footer";
+import {
+  getDoctors,
+  getInstagram,
+  getLinks,
+  getPackages,
+  getProducts,
+  getResults,
+  getReviews,
+  getTreatments,
+} from "@/lib/site/data";
+
+/**
+ * Rebuilt at most hourly; every save in the dashboard also rebuilds it at
+ * once (revalidatePath), so the hour only matters for Google's reviews.
+ */
+export const revalidate = 3600;
 
 /*
- * Section order follows athenaderma.com: film hero → brand stamp → location →
- * concerns → philosophy → doctors → popular treatments → journal. The
- * sections that Athena has no slot for (packages, results, shop, portal)
- * sit where their neighbours make sense of them.
+ * Section order follows athenaderma.com: film hero → brand stamp → doctors →
+ * location → concerns → philosophy → popular treatments → journal. The
+ * sections that Athena has no slot for (packages, results, shop) sit where
+ * their neighbours make sense of them. Anything the owner has not filled in
+ * yet hides itself.
  */
-export default function Home() {
+export default async function Home() {
+  const [treatments, packages, results, doctors, press, certifications, reviews, products, instagram] =
+    await Promise.all([
+      getTreatments(6),
+      getPackages(3),
+      getResults(3),
+      getDoctors(4),
+      getLinks("press"),
+      getLinks("certification"),
+      getReviews(),
+      getProducts(4),
+      getInstagram(),
+    ]);
+
   return (
-    <BagProvider>
+    <>
       {/* SmoothScroll must mount before Preloader so the preloader can pause it. */}
       <SmoothScroll />
       <Preloader />
@@ -38,26 +66,25 @@ export default function Home() {
       <Header />
       <main>
         <Hero />
-        <Statement />
+        <Statement press={press} />
+        <Team doctors={doctors} />
         <Visit />
-        <Treatments />
+        <Treatments items={treatments} />
         <About />
         <FeatureVideo />
-        <Packages />
-        <Results />
-        <Team />
-        <Certifications />
-        <Reviews />
-        <Shop />
-        <Social />
+        <Packages items={packages} />
+        <Results items={results} />
+        <Certifications items={certifications} />
+        <Reviews data={reviews} />
+        <Shop items={products} />
+        <Social data={instagram} />
         <Faq />
-        <Portal />
         <Cta />
       </main>
       <Footer />
       <RoamingBadge />
-      <FabInstagram />
+      <FabInstagram url={instagram?.url ?? null} />
       <div className="grain" aria-hidden />
-    </BagProvider>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CLINIC_ADDRESS, CLINIC_PHONE } from "@/lib/clinic";
 import {
   formatDose,
   formatDuration,
@@ -107,10 +108,11 @@ function Footer() {
         </div>
       </div>
       <div
-        className="px-6 py-2 text-center text-[10.5px] font-semibold tracking-[0.12em] text-white [print-color-adjust:exact] [-webkit-print-color-adjust:exact] sm:px-9"
+        className="flex items-center justify-between gap-6 px-6 py-2.5 text-[11px] font-semibold tracking-[0.06em] text-white [print-color-adjust:exact] [-webkit-print-color-adjust:exact] sm:px-9"
         style={{ background: GOLD_BAND }}
       >
-        DERMASOUL MEDICAL AESTHETICS · BY DR. NUSRAT LIZA
+        <span className="min-w-0">{CLINIC_ADDRESS}</span>
+        <span className="shrink-0 tabular-nums">{CLINIC_PHONE}</span>
       </div>
     </footer>
   );
@@ -280,7 +282,7 @@ export function ReadMedicines({ items }: { items: Medicine[] }) {
         <li key={i} className="break-inside-avoid">
           <div className="flex gap-2 text-[15px] font-semibold">
             <span className="w-5 shrink-0 text-right text-muted">{i + 1}.</span>
-            <span>{m.name}</span>
+            <span className="whitespace-pre-line">{m.name}</span>
           </div>
           {m.kind !== "other" && (
             <div className="mt-0.5 flex items-end pl-7 text-[13px]">
@@ -295,6 +297,12 @@ export function ReadMedicines({ items }: { items: Medicine[] }) {
       ))}
     </ol>
   );
+}
+
+/** The doctor's follow-up note, line breaks kept. */
+export function ReadFollowUp({ text }: { text: string }) {
+  if (!text.trim()) return <Blank />;
+  return <p className="whitespace-pre-line text-[13.5px] leading-relaxed">{text}</p>;
 }
 
 /**
@@ -325,10 +333,20 @@ export function PadSummary({ pad }: { pad: PadData }) {
           </div>
         )}
       </div>
-      {pad.medicines.length > 0 && (
-        <div>
-          <span className={head}>Rx</span>
-          <div className="mt-1.5"><ReadMedicines items={pad.medicines} /></div>
+      {(pad.medicines.length > 0 || pad.followUp.trim()) && (
+        <div className="space-y-4">
+          {pad.medicines.length > 0 && (
+            <div>
+              <span className={head}>Rx</span>
+              <div className="mt-1.5"><ReadMedicines items={pad.medicines} /></div>
+            </div>
+          )}
+          {pad.followUp.trim() && (
+            <div>
+              <span className={head}>Follow up</span>
+              <div className="mt-1.5"><ReadFollowUp text={pad.followUp} /></div>
+            </div>
+          )}
         </div>
       )}
     </div>

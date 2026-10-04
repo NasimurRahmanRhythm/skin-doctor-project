@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import ImageInput from "@/components/image-input";
 import {
   btnPrimary,
   card,
@@ -23,7 +24,7 @@ function Submit() {
   );
 }
 
-export default function AddStaffForm() {
+export default function AddStaffForm({ designations }: { designations: string[] }) {
   const [state, action] = useActionState<StaffState, FormData>(addStaff, {});
   const [role, setRole] = useState("doctor");
 
@@ -84,16 +85,29 @@ export default function AddStaffForm() {
         {role === "doctor" && (
           <div>
             <label htmlFor="specialty" className={label}>
-              Specialty
+              Designation
             </label>
-            <input
-              id="specialty"
-              name="specialty"
-              placeholder="Dermatologist"
-              className={field}
-            />
+            {designations.length > 0 ? (
+              <select id="specialty" name="specialty" required defaultValue="" className={field}>
+                <option value="" disabled>
+                  Choose a designation
+                </option>
+                {designations.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="mt-1.5 rounded-control border border-dashed border-hairline px-3 py-2.5 text-sm text-muted">
+                Add a designation first, in the Designations card above.
+              </p>
+            )}
           </div>
         )}
+        <div className="sm:col-span-2">
+          <ImageInput name="photo" label="Profile photo" round />
+        </div>
       </div>
 
       {state.error && (

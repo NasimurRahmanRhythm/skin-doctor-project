@@ -7,6 +7,14 @@
  */
 export const CLINIC_TZ = "Asia/Dhaka";
 
+/**
+ * The main clinic, as printed on the prescription footer and shown on the
+ * website. One place, so the two never disagree.
+ */
+export const CLINIC_ADDRESS = "Banani, Dhaka";
+// TODO: the real number has not been given yet.
+export const CLINIC_PHONE = "+880 0000 000000";
+
 /** Bangladesh has observed no DST since 2009, so the offset is fixed. */
 const CLINIC_UTC_OFFSET = "+06:00";
 

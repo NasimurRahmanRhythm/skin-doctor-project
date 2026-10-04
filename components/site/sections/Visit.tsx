@@ -46,8 +46,6 @@ export default function Visit() {
           <span className="kicker">Visit the studio</span>
           <SplitReveal as="h2" className="display">
             {brand.address[0]}, <em>{brand.address[1]}</em>
-            <br />
-            {brand.address[2]}
           </SplitReveal>
 
           <Reveal className="visit-cols" delay={0.2}>
@@ -65,7 +63,7 @@ export default function Visit() {
           </Reveal>
 
           <Reveal delay={0.3}>
-            <a href="#cta" className="btn btn-outline-light">
+            <a href="/inquiry" className="btn btn-outline-light">
               <span>Book a Consultation</span>
               <ArrowUpRight width={18} />
             </a>

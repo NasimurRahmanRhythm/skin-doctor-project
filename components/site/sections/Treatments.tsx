@@ -1,92 +1,120 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import { AnimatePresence, motion, useMotionValue, useSpring } from "motion/react";
-import { treatments, treatmentsIntro } from "@/lib/site/content";
+import { treatmentsIntro } from "@/lib/site/content";
+import type { SiteTreatment } from "@/lib/site/data";
+import { excerpt } from "@/lib/site/excerpt";
+import { useQueryParam } from "@/lib/site/use-query-param";
 import SplitReveal from "@/components/site/fx/SplitReveal";
 import Reveal from "@/components/site/fx/Reveal";
+import SiteModal from "@/components/site/SiteModal";
 import { Arrow } from "@/components/site/Icons";
 
 /**
  * Athena's concern grid, recast as an editorial index: a long list of rows,
- * with a photograph that floats after the cursor and swaps as you move
- * between them. Touch screens get the image inline in each row instead.
+ * each a title and the first sentence or two of its description. Hovering
+ * shifts the row and warms the title; there are no pictures.
  */
-export default function Treatments() {
-  const [active, setActive] = useState<number | null>(null);
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const x = useSpring(mx, { stiffness: 140, damping: 20, mass: 0.6 });
-  const y = useSpring(my, { stiffness: 140, damping: 20, mass: 0.6 });
-  const rotate = useSpring(0, { stiffness: 120, damping: 14 });
+function Rows({
+  items,
+  onOpen,
+}: {
+  items: SiteTreatment[];
+  /** On /treatments a row opens its window; on the landing page it links there. */
+  onOpen?: (t: SiteTreatment) => void;
+}) {
+  return (
+    <div className="treat-list">
+      {items.map((t, i) => (
+        <Reveal key={t.id} delay={Math.min(i, 8) * 0.05} y={30}>
+          <a
+            href={`/treatments?t=${t.id}`}
+            className="treat-row"
+            data-cursor="Read"
+            onClick={(e) => {
+              if (!onOpen) return;
+              e.preventDefault();
+              onOpen(t);
+            }}
+          >
+            <span className="treat-idx">{String(i + 1).padStart(2, "0")}</span>
+            <h3 className="treat-title">{t.title}</h3>
+            <p className="treat-body">{excerpt(t.description)}</p>
+            <span className="treat-arrow">
+              <Arrow width={20} />
+            </span>
+          </a>
+        </Reveal>
+      ))}
+    </div>
+  );
+}
 
-  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const nx = e.clientX - r.left;
-    // Tilt toward the direction of travel: the gap between cursor and the lagging image.
-    rotate.set(Math.max(-10, Math.min(10, (nx - x.get()) / 18)));
-    mx.set(nx);
-    my.set(e.clientY - r.top);
-  };
+function Head({ as = "h2" }: { as?: "h1" | "h2" }) {
+  return (
+    <div className="sec-head split" data-roam-zone>
+      <div>
+        <span className="kicker">{treatmentsIntro.kicker}</span>
+        <SplitReveal as={as} className="display">
+          Our <em>Treatments</em>
+        </SplitReveal>
+      </div>
+      <Reveal className="sec-lede">
+        <p>{treatmentsIntro.body}</p>
+        <span className="roam-anchor treat-roam" data-roam data-roam-scale="0.85" />
+      </Reveal>
+    </div>
+  );
+}
 
+/** The landing page's slice: the first few, and the way to the rest. */
+export default function Treatments({ items }: { items: SiteTreatment[] }) {
+  if (items.length === 0) return null;
   return (
     <section className="treatments" id="treatments">
       <div className="wrap">
-        <div className="sec-head split" data-roam-zone>
-          <div>
-            <span className="kicker">{treatmentsIntro.kicker}</span>
-            <SplitReveal as="h2" className="display">
-              Our <em>Treatments</em>
-            </SplitReveal>
-          </div>
-          <Reveal className="sec-lede">
-            <p>{treatmentsIntro.body}</p>
-            <span className="roam-anchor treat-roam" data-roam data-roam-scale="0.85" />
-          </Reveal>
-        </div>
-
-        <div className="treat-list" data-roam-zone onPointerMove={onMove} onPointerLeave={() => setActive(null)}>
-          {treatments.map((t, i) => (
-            <Reveal key={t.title} delay={i * 0.05} y={30}>
-              <a
-                href="#cta"
-                className={`treat-row ${active !== null && active !== i ? "is-dim" : ""}`}
-                onPointerEnter={() => setActive(i)}
-                data-cursor="Book"
-              >
-                <span className="treat-idx">0{i + 1}</span>
-                <span className="treat-thumb">
-                  <Image src={t.image} alt="" fill sizes="96px" />
-                </span>
-                <h3 className="treat-title">{t.title}</h3>
-                <p className="treat-body">{t.body}</p>
-                <span className="treat-arrow">
-                  <Arrow width={20} />
-                </span>
-              </a>
-            </Reveal>
-          ))}
-
-          <span className="roam-anchor treat-list-roam" data-roam data-roam-scale="0.8" />
-          <motion.div className="treat-float" style={{ x, y, rotate }} aria-hidden>
-            <AnimatePresence>
-              {active !== null && (
-                <motion.div
-                  key={active}
-                  className="treat-float-img"
-                  initial={{ clipPath: "inset(50% 50% 50% 50% round 12px)", scale: 1.2 }}
-                  animate={{ clipPath: "inset(0% 0% 0% 0% round 12px)", scale: 1 }}
-                  exit={{ opacity: 0, transition: { duration: 0.35 } }}
-                  transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  <Image src={treatments[active].image} alt="" fill sizes="340px" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+        <Head />
+        <Rows items={items} />
+        <div className="see-more">
+          <a href="/treatments" className="btn btn-outline">
+            <span>See all treatments</span>
+            <Arrow width={18} />
+          </a>
         </div>
       </div>
+    </section>
+  );
+}
+
+/** /treatments: every treatment, each opening in a window with its full text. */
+export function TreatmentCatalog({ items }: { items: SiteTreatment[] }) {
+  const [openId, setOpenId] = useQueryParam("t");
+  const open = items.find((t) => t.id === openId) ?? null;
+  const show = (t: SiteTreatment | null) => setOpenId(t?.id ?? null);
+
+  return (
+    <section className="treatments page-section" id="treatments">
+      <div className="wrap">
+        <Head as="h1" />
+        {items.length ? (
+          <Rows items={items} onOpen={show} />
+        ) : (
+          <p className="page-empty">Treatments will be listed here soon.</p>
+        )}
+      </div>
+
+      <SiteModal open={!!open} onClose={() => show(null)} label={open?.title ?? "Treatment"}>
+        {open && (
+          <>
+            <span className="kicker">Treatment</span>
+            <h2 className="site-modal-title">{open.title}</h2>
+            <p className="site-modal-text">{open.description}</p>
+            <a href={`/inquiry?about=${encodeURIComponent(open.title)}`} className="btn btn-dark">
+              <span>Book a Consultation</span>
+              <Arrow width={18} />
+            </a>
+          </>
+        )}
+      </SiteModal>
     </section>
   );
 }

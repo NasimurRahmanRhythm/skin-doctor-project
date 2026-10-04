@@ -138,7 +138,7 @@ export default function RoamingBadge() {
       </div>
       <a
         ref={root}
-        href="#cta"
+        href="/inquiry"
         className="roam roam-core"
         aria-label="DermaSoul Aesthetics — book a consultation"
         data-cursor="Book"

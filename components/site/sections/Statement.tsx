@@ -1,15 +1,17 @@
 "use client";
 
 import { useRef } from "react";
-import { hero, press } from "@/lib/site/content";
+import { hero } from "@/lib/site/content";
+import type { SiteLink } from "@/lib/site/data";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/site/gsap";
 import { Sprig } from "@/components/site/Icons";
 
 /**
  * The brand stamp: the studio's one-line promise, read word by word as the
- * scroll passes over it, then the press row as a slow marquee.
+ * scroll passes over it, then the press row as a slow marquee: articles the
+ * owner adds in the dashboard, each opening in a new tab. No articles, no row.
  */
-export default function Statement() {
+export default function Statement({ press }: { press: SiteLink[] }) {
   const root = useRef<HTMLElement>(null);
   const words = hero.lede.split(" ");
 
@@ -59,23 +61,37 @@ export default function Statement() {
         <span className="roam-anchor stmt-roam" data-roam data-roam-scale="0.9" />
       </div>
 
-      <div className="press">
-        <span className="press-label">As seen in</span>
-        <div className="marquee" aria-label={press.join(", ")}>
-          <div className="marquee-track">
-            {[0, 1].map((dup) => (
-              <div className="marquee-group" key={dup} aria-hidden={dup === 1}>
-                {press.concat(press).map((p, i) => (
-                  <span key={i} className="press-name">
-                    {p}
-                    <i>✦</i>
-                  </span>
-                ))}
-              </div>
-            ))}
+      {press.length > 0 && (
+        <div className="press">
+          <span className="press-label">As seen in</span>
+          <div className="marquee">
+            <div className="marquee-track">
+              {[0, 1].map((dup) => (
+                <div className="marquee-group" key={dup} aria-hidden={dup === 1}>
+                  {/* Repeated so even one or two titles fill the band. */}
+                  {Array.from({ length: Math.max(2, Math.ceil(8 / press.length)) }, () => press)
+                    .flat()
+                    .map((p, i) => (
+                      <span key={i} className="press-name">
+                        <a
+                          href={p.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          // Only the first copy of each title is reachable by Tab.
+                          tabIndex={dup === 0 && i < press.length ? undefined : -1}
+                          data-cursor="Read"
+                        >
+                          {p.title}
+                        </a>
+                        <i>✦</i>
+                      </span>
+                    ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }

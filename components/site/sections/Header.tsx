@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react";
-import { brand, nav } from "@/lib/site/content";
-import { useBag } from "@/components/site/Bag";
-import { Bag } from "@/components/site/Icons";
+import { brand, hoursLine, nav } from "@/lib/site/content";
 import { getLenis } from "@/lib/site/scroll";
 import { onIntroDone } from "@/lib/site/intro";
 
 const EASE = [0.76, 0, 0.24, 1] as const;
 
-export default function Header() {
+/**
+ * The logo on the left, the section links on the right. On the inner pages
+ * (/treatments, /packages…) there is no dark hero behind it, so `alwaysSolid`
+ * starts it on the cream bar it otherwise only takes on after scrolling.
+ */
+export default function Header({ alwaysSolid = false }: { alwaysSolid?: boolean }) {
   const { scrollY, scrollYProgress } = useScroll();
-  const { count } = useBag();
-  const [solid, setSolid] = useState(false);
+  const [solid, setSolid] = useState(alwaysSolid);
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
@@ -23,7 +26,7 @@ export default function Header() {
 
   useMotionValueEvent(scrollY, "change", (y) => {
     const prev = scrollY.getPrevious() ?? 0;
-    setSolid(y > 60);
+    setSolid(alwaysSolid || y > 60);
     setHidden(y > 400 && y > prev && !open);
   });
 
@@ -43,15 +46,7 @@ export default function Header() {
         animate={ready ? { y: hidden ? -100 : 0, opacity: 1 } : undefined}
         transition={{ duration: 0.8, ease: EASE }}
       >
-        <nav className="hdr-links" aria-label="Primary">
-          {nav.map((l) => (
-            <a key={l.href} href={l.href} className="roll">
-              <span data-text={l.label}>{l.label}</span>
-            </a>
-          ))}
-        </nav>
-
-        <a href="#top" className="wordmark" aria-label={`${brand.name} — home`}>
+        <Link href="/" className="wordmark" aria-label={`${brand.name} — home`}>
           <Image src="/brand/mark-256.png" alt="" width={40} height={40} preload />
           <span className="wordmark-text">
             <span>
@@ -59,29 +54,16 @@ export default function Header() {
             </span>
             <small>{brand.tagline}</small>
           </span>
-        </a>
+        </Link>
 
         <div className="hdr-actions">
-          <a href="#shop" className="hdr-bag" aria-label={`Bag, ${count} items`}>
-            <Bag width={20} height={20} />
-            <AnimatePresence mode="popLayout">
-              <motion.span
-                key={count}
-                className="hdr-bag-count"
-                initial={{ y: -10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 10, opacity: 0 }}
-              >
-                {count}
-              </motion.span>
-            </AnimatePresence>
-          </a>
-          <a href="#portal" className="hdr-portal roll">
-            <span data-text="Patient Portal">Patient Portal</span>
-          </a>
-          <a href="#cta" className="btn btn-pill hdr-book">
-            <span>Book a Consultation</span>
-          </a>
+          <nav className="hdr-links" aria-label="Primary">
+            {nav.map((l) => (
+              <a key={l.href} href={l.href} className="roll">
+                <span data-text={l.label}>{l.label}</span>
+              </a>
+            ))}
+          </nav>
           <button
             className="menu-btn"
             aria-label={open ? "Close menu" : "Open menu"}
@@ -104,7 +86,7 @@ export default function Header() {
             transition={{ duration: 0.9, ease: EASE }}
           >
             <nav aria-label="Mobile">
-              {[...nav, { label: "Patient Portal", href: "#portal" }].map((l, i) => (
+              {nav.map((l, i) => (
                 <div key={l.href} className="mm-line">
                   <motion.a
                     href={l.href}
@@ -126,8 +108,8 @@ export default function Header() {
               animate={{ opacity: 1, transition: { delay: 0.7 } }}
               exit={{ opacity: 0 }}
             >
-              <p>{brand.address.join(", ")}</p>
-              <p>{brand.hours[0]}</p>
+              <p>{brand.addressLine}</p>
+              <p>{hoursLine}</p>
               <a href={`mailto:${brand.email}`}>{brand.email}</a>
             </motion.div>
           </motion.div>
