@@ -32,6 +32,8 @@ export type FieldDef = {
   group?: string;
   /** Suggestions offered while typing (text fields). */
   suggestions?: string[];
+  /** For images: a logo, whose transparent background must survive. */
+  logo?: boolean;
 };
 
 export type SectionKey =
@@ -250,12 +252,13 @@ export const SECTIONS: SectionDef[] = [
     fixed: { kind: "press" },
     tab: "As seen in",
     title: "As seen in",
-    hint: "Articles that mention the clinic. The titles scroll under the brand statement and each opens its article in a new tab.",
+    hint: "Articles that mention the clinic. They scroll under the brand statement and each opens its article in a new tab. One with a logo scrolls past as the logo; without one, as its title.",
     noun: "article",
     titleField: "title",
     subField: "url",
     fields: [
-      { name: "title", label: "Title", type: "text", required: true, max: 120, placeholder: "e.g. The Daily Star — Skin care in Dhaka" },
+      { name: "title", label: "Title", type: "text", required: true, max: 120, placeholder: "e.g. The Daily Star — Skin care in Dhaka", hint: "Shown when there is no logo, and read out for the logo otherwise." },
+      { name: "logo_path", label: "Logo", type: "image", logo: true, hint: "Optional. A PNG with a transparent background looks best." },
       { name: "url", label: "Link", type: "url", required: true, placeholder: "https://…", pattern: HTTP_URL, patternMessage: "Use a full link starting with https://" },
     ],
   },
@@ -265,12 +268,13 @@ export const SECTIONS: SectionDef[] = [
     fixed: { kind: "certification" },
     tab: "Certifications",
     title: "Certifications & Societies",
-    hint: "Each name scrolls in the Certifications & Societies band and opens its link in a new tab.",
+    hint: "Each entry scrolls in the Certifications & Societies band and opens its link in a new tab. One with a logo scrolls past as the logo; without one, as its name.",
     noun: "entry",
     titleField: "title",
     subField: "url",
     fields: [
-      { name: "title", label: "Title", type: "text", required: true, max: 120, placeholder: "e.g. Bangladesh Society of Dermatologists" },
+      { name: "title", label: "Title", type: "text", required: true, max: 120, placeholder: "e.g. Bangladesh Society of Dermatologists", hint: "Shown when there is no logo, and read out for the logo otherwise." },
+      { name: "logo_path", label: "Logo", type: "image", logo: true, hint: "Optional. A PNG with a transparent background looks best." },
       { name: "url", label: "Link", type: "url", required: true, placeholder: "https://…", pattern: HTTP_URL, patternMessage: "Use a full link starting with https://" },
     ],
   },

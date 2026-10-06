@@ -1029,6 +1029,21 @@ html.has-cursor .site-modal button {
   color: var(--gold-deep);
   text-decoration-color: currentColor;
 }
+/* A logo in place of the title: the same height as the title's line. */
+.press-logo {
+  display: block;
+  height: clamp(38px, 4.2vw, 58px);
+  width: auto;
+  max-width: 240px;
+  object-fit: contain;
+  opacity: 0.85;
+  transition: opacity 0.4s var(--ease), transform 0.5s var(--ease);
+}
+.press-name a:hover .press-logo,
+.press-name a:focus-visible .press-logo {
+  opacity: 1;
+  transform: scale(1.05);
+}
 
 
 /* ---------- visit ---------- */
@@ -1885,6 +1900,20 @@ html.has-cursor .site-modal button {
 .cert-chip:hover {
   background: var(--ink);
   color: var(--cream);
+}
+/* A logo in place of the name; the chip stays light so the logo reads. */
+.cert-chip.has-logo {
+  padding: 8px 30px;
+}
+.cert-chip.has-logo:hover {
+  background: var(--sand);
+}
+.cert-logo {
+  display: block;
+  height: 52px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
 }
 
 /* ---------- reviews ---------- */

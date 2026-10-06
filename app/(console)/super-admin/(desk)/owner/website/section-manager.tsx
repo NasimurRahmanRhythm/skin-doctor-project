@@ -201,6 +201,7 @@ export default function SectionManager({ def, rows }: { def: SectionDef; rows: M
                   required={f.required}
                   currentUrl={editing?.images[f.name] ?? null}
                   hint={f.hint}
+                  keepTransparency={f.logo}
                 />
               );
             } else {

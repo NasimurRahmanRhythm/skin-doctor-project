@@ -13,7 +13,14 @@ const MAX_EDGE = 1600;
 const QUALITY = 0.82;
 const SKIP_BELOW_BYTES = 400 * 1024;
 
-export async function compressImage(file: File): Promise<File> {
+/**
+ * `keepTransparency`: for logos. A transparent PNG re-encoded as JPEG gets a
+ * black background, so these are re-encoded as WebP, which keeps it.
+ */
+export async function compressImage(
+  file: File,
+  { keepTransparency = false }: { keepTransparency?: boolean } = {},
+): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
   // Re-encoding these would lose transparency or animation for no real gain.
   if (file.type === "image/gif" || file.type === "image/svg+xml") return file;
@@ -34,13 +41,13 @@ export async function compressImage(file: File): Promise<File> {
     ctx.drawImage(bitmap, 0, 0, width, height);
     bitmap.close?.();
 
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", QUALITY),
-    );
-    if (!blob || blob.size >= file.size) return file;
+    const type = keepTransparency ? "image/webp" : "image/jpeg";
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, QUALITY));
+    // A browser that cannot write WebP hands back a PNG; keep the original then.
+    if (!blob || blob.type !== type || blob.size >= file.size) return file;
 
-    const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
-    return new File([blob], name, { type: "image/jpeg", lastModified: Date.now() });
+    const name = file.name.replace(/\.[^.]+$/, "") + (keepTransparency ? ".webp" : ".jpg");
+    return new File([blob], name, { type, lastModified: Date.now() });
   } catch {
     // Any failure here just means the original gets uploaded.
     return file;

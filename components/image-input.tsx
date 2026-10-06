@@ -20,6 +20,7 @@ export default function ImageInput({
   currentUrl = null,
   round = false,
   hint,
+  keepTransparency = false,
 }: {
   name: string;
   label: string;
@@ -27,6 +28,8 @@ export default function ImageInput({
   currentUrl?: string | null;
   round?: boolean;
   hint?: string;
+  /** For logos: shrink without losing a transparent background. */
+  keepTransparency?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -40,7 +43,7 @@ export default function ImageInput({
     const picked = e.target.files?.[0];
     if (!picked) return;
     setBusy(true);
-    const small = await compressImage(picked);
+    const small = await compressImage(picked, { keepTransparency });
     setBusy(false);
     if (small !== picked && input.current) {
       const dt = new DataTransfer();

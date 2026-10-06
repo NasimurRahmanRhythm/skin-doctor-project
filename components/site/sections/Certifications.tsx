@@ -4,8 +4,9 @@ import { certIcons } from "@/components/site/Icons";
 
 /**
  * Two marquee rows running opposite ways; hovering pauses them. Each chip is
- * a society or certificate the owner added in the dashboard, and opens its
- * link in a new tab. With only a few entries one row is enough.
+ * a society or certificate the owner added in the dashboard, shown as its
+ * logo when it has one, and opens its link in a new tab. With only a few
+ * entries one row is enough.
  */
 export default function Certifications({ items }: { items: SiteLink[] }) {
   if (items.length === 0) return null;
@@ -27,11 +28,20 @@ export default function Certifications({ items }: { items: SiteLink[] }) {
                   href={c.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="cert-chip"
+                  className={`cert-chip ${c.logo ? "has-logo" : ""}`}
                   tabIndex={reachable ? undefined : -1}
+                  aria-label={c.logo ? c.title : undefined}
+                  title={c.logo ? c.title : undefined}
                 >
-                  <Icon width={20} height={20} />
-                  {c.title}
+                  {c.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- owner-uploaded logo from storage
+                    <img src={c.logo} alt="" className="cert-logo" loading="lazy" />
+                  ) : (
+                    <>
+                      <Icon width={20} height={20} />
+                      {c.title}
+                    </>
+                  )}
                 </a>
               );
             })}

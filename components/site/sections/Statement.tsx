@@ -9,7 +9,8 @@ import { Sprig } from "@/components/site/Icons";
 /**
  * The brand stamp: the studio's one-line promise, read word by word as the
  * scroll passes over it, then the press row as a slow marquee: articles the
- * owner adds in the dashboard, each opening in a new tab. No articles, no row.
+ * owner adds in the dashboard, each shown as its logo (or else its title) and
+ * opening in a new tab. No articles, no row.
  */
 export default function Statement({ press }: { press: SiteLink[] }) {
   const root = useRef<HTMLElement>(null);
@@ -80,8 +81,14 @@ export default function Statement({ press }: { press: SiteLink[] }) {
                           // Only the first copy of each title is reachable by Tab.
                           tabIndex={dup === 0 && i < press.length ? undefined : -1}
                           data-cursor="Read"
+                          aria-label={p.logo ? p.title : undefined}
                         >
-                          {p.title}
+                          {p.logo ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- owner-uploaded logo from storage
+                            <img src={p.logo} alt="" className="press-logo" loading="lazy" />
+                          ) : (
+                            p.title
+                          )}
                         </a>
                         <i>✦</i>
                       </span>
