@@ -82,8 +82,9 @@ export default async function Home() {
         <Statement press={press} />
         {/*
          * Our Team and Packages are hidden for now. To bring them back,
-         * uncomment them here together with their imports, their entries in
-         * the Promise.all above, and their nav links in lib/site/content.ts.
+         * uncomment them here together with their imports and their entries
+         * in the Promise.all above, and point their nav links in
+         * lib/site/content.ts back at "/#team" and "/#packages".
          */}
         {/* <Team doctors={doctors} /> */}
         <Visit />

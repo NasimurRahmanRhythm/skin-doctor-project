@@ -47,10 +47,11 @@ export const hoursLine = brand.hours.join(" · ");
  */
 export const nav = [
   { label: "Treatments", href: "/#treatments" },
-  // Hidden for now along with their landing-page sections (app/(site)/page.tsx).
-  // Uncomment both together to bring them back.
-  // { label: "Our Team", href: "/#team" },
-  // { label: "Packages", href: "/#packages" },
+  // Their landing-page sections are hidden for now (app/(site)/page.tsx), so
+  // these open the full pages. Back to "/#team" and "/#packages" when the
+  // sections return.
+  { label: "Our Team", href: "/team" },
+  { label: "Packages", href: "/packages" },
   { label: "Results", href: "/#results" },
   { label: "Reviews", href: "/#reviews" },
   { label: "About", href: "/#about" },
