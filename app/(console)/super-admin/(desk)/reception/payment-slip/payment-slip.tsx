@@ -10,8 +10,8 @@ import { savePaymentSlip } from "./actions";
 /**
  * The payment slip: typed on the sheet that prints, like the prescription pad.
  *
- * Line totals, the grand total, the amount in words and the date beside the
- * signature all follow from what is typed above them. "Save & print" records
+ * Line totals, the grand total and the amount in words all follow from what
+ * is typed above them. "Save & print" records
  * the slip first and then locks the sheet, so the paper the patient takes home
  * cannot drift from the row the owner sees. The signature is added by hand.
  */
@@ -412,16 +412,10 @@ export default function PaymentSlip() {
             </span>
           </div>
 
-          <div className="mt-20 flex items-end justify-between gap-6 break-inside-avoid">
+          <div className="mt-20 break-inside-avoid">
             {/* Left blank on purpose: signed by hand once the slip is printed. */}
             <div className="w-52 border-t border-fg/60 pt-1 text-center text-xs italic text-muted">
               Authorised signature
-            </div>
-            <div className="flex items-end gap-1.5">
-              <span className="text-[13px] italic text-muted">Date:</span>
-              <span className="min-h-[1.6em] w-32 border-b border-dotted border-fg/50 px-1 py-0.5 text-center text-[13.5px] font-semibold tabular-nums">
-                {slipDate}
-              </span>
             </div>
           </div>
         </div>

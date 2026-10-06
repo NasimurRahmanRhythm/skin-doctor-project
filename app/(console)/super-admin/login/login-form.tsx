@@ -7,6 +7,7 @@ import { btnPrimary, card, field, fieldLabel } from "@/components/ui";
 import { sendCode, verifyCode, type LoginState } from "./actions";
 
 const RESEND_SECONDS = 60;
+const CODE_LENGTH = 6;
 
 const initial: LoginState = { step: "email", email: "" };
 
@@ -92,11 +93,61 @@ function CodeForm({
   resend: (formData: FormData) => void;
 }) {
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [digits, setDigits] = useState<string[]>(() => Array(CODE_LENGTH).fill(""));
+  const boxes = useRef<(HTMLInputElement | null)[]>([]);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    boxes.current[0]?.focus();
   }, []);
+
+  /** Writes digits from one box onward, then moves on — or signs in when full. */
+  const fill = (start: number, chars: string) => {
+    const next = [...digits];
+    for (let k = 0; k < chars.length && start + k < CODE_LENGTH; k++) {
+      next[start + k] = chars[k];
+    }
+    setDigits(next);
+    boxes.current[Math.min(start + chars.length, CODE_LENGTH - 1)]?.focus();
+    // Once the hidden field has the new value, not before.
+    if (next.every(Boolean)) setTimeout(() => formRef.current?.requestSubmit(), 0);
+  };
+
+  const onChange = (i: number, raw: string) => {
+    const typed = raw.replace(/\D/g, "");
+    if (!typed) {
+      setDigits((prev) => prev.map((d, k) => (k === i ? "" : d)));
+      return;
+    }
+    // A second digit typed into a full box replaces the one that was there.
+    if (typed.length === 2 && digits[i]) {
+      fill(i, typed[0] === digits[i] ? typed[1] : typed[0]);
+      return;
+    }
+    // Longer than that is the browser or the keyboard offering the whole code.
+    fill(typed.length > 1 ? 0 : i, typed);
+  };
+
+  const onKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !digits[i] && i > 0) {
+      e.preventDefault();
+      setDigits((prev) => prev.map((d, k) => (k === i - 1 ? "" : d)));
+      boxes.current[i - 1]?.focus();
+    } else if (e.key === "ArrowLeft" && i > 0) {
+      e.preventDefault();
+      boxes.current[i - 1]?.focus();
+    } else if (e.key === "ArrowRight" && i < CODE_LENGTH - 1) {
+      e.preventDefault();
+      boxes.current[i + 1]?.focus();
+    }
+  };
+
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "");
+    if (!pasted) return;
+    e.preventDefault();
+    fill(0, pasted.slice(0, CODE_LENGTH));
+  };
 
   // Supabase allows one code request per 60s. Showing the countdown is kinder
   // than letting someone mash the button into a rate-limit error — and every
@@ -109,24 +160,37 @@ function CodeForm({
 
   return (
     <>
-      <form action={action} className="mt-6 space-y-4">
+      <form ref={formRef} action={action} className="mt-6 space-y-4">
         <input type="hidden" name="email" value={email} />
+        <input type="hidden" name="code" value={digits.join("")} />
         <div>
-          <label htmlFor="code" className={fieldLabel}>
+          <span id="code-label" className={fieldLabel}>
             Code sent to <span className="text-fg">{email}</span>
-          </label>
-          <input
-            ref={inputRef}
-            id="code"
-            name="code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            pattern="\d{6}"
-            required
-            placeholder="123456"
-            className={`${field} mt-1.5 text-center font-mono text-xl tracking-[0.5em]`}
-          />
+          </span>
+          <div
+            role="group"
+            aria-labelledby="code-label"
+            className="mt-1.5 grid grid-cols-6 gap-2"
+          >
+            {digits.map((d, i) => (
+              <input
+                key={i}
+                ref={(el) => {
+                  boxes.current[i] = el;
+                }}
+                value={d}
+                onChange={(e) => onChange(i, e.target.value)}
+                onKeyDown={(e) => onKeyDown(i, e)}
+                onPaste={onPaste}
+                onFocus={(e) => e.target.select()}
+                inputMode="numeric"
+                // Only the first box, so an offered code lands once and spreads.
+                autoComplete={i === 0 ? "one-time-code" : "off"}
+                aria-label={`Digit ${i + 1} of ${CODE_LENGTH}`}
+                className={`${field} h-12 px-0 text-center font-mono text-xl font-semibold`}
+              />
+            ))}
+          </div>
         </div>
         <SubmitButton label="Sign in" busy="Checking…" />
       </form>
