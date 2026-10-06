@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  btnPrimary,
   card,
   cardPad,
   Code,
@@ -62,6 +63,18 @@ export default async function ReceptionPage({
 
   return (
     <div className="animate-rise space-y-6">
+      <section className={`${card} ${cardPad}`}>
+        <SectionHead
+          title="Payment slip"
+          hint="Fill in a bill for services, medicine or products, then save and print it for the patient."
+          trailing={
+            <Link href="/super-admin/reception/payment-slip" className={btnPrimary}>
+              New payment slip
+            </Link>
+          }
+        />
+      </section>
+
       <CheckInForm doctors={doctors ?? []} />
 
       <section className={`${card} ${cardPad}`}>
