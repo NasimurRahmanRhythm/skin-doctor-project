@@ -30,6 +30,33 @@ export const Instagram = (p: P) => (
   </svg>
 );
 
+export const Facebook = (p: P) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <path d="M14 8h3V4h-3a4 4 0 0 0-4 4v3H7v4h3v6h4v-6h3l1-4h-4V8Z" />
+  </svg>
+);
+
+export const XLogo = (p: P) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <path d="M4 4h4.3L20 20h-4.3L4 4Z" />
+    <path d="M4 20l6.8-7.4M20 4l-6.8 7.4" />
+  </svg>
+);
+
+export const LinkedIn = (p: P) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="3" />
+    <path d="M8 10v7M8 7v.01M12 17v-4a2 2 0 0 1 4 0v4M12 10v7" />
+  </svg>
+);
+
+export const YouTube = (p: P) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <rect x="2.5" y="5" width="19" height="14" rx="4" />
+    <path d="M10 9.2v5.6l4.8-2.8L10 9.2Z" fill="currentColor" />
+  </svg>
+);
+
 export const Bag = (p: P) => (
   <svg viewBox="0 0 24 24" {...base} {...p}>
     <path d="M5 8h14l-1 12H6L5 8Z" />

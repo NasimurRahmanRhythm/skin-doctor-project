@@ -1,14 +1,13 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
-import { brand } from "@/lib/site/content";
+import { brand, mapEmbedUrl } from "@/lib/site/content";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/site/gsap";
 import SplitReveal from "@/components/site/fx/SplitReveal";
 import Reveal from "@/components/site/fx/Reveal";
 import { ArrowUpRight } from "@/components/site/Icons";
 
-/** Athena's location band: where to find us, beside a window into the studio. */
+/** Athena's location band: where to find us, beside a map with the clinic pinned. */
 export default function Visit() {
   const root = useRef<HTMLElement>(null);
 
@@ -25,16 +24,6 @@ export default function Visit() {
           scrollTrigger: { trigger: ".visit-media", start: "top 80%", once: true },
         }
       );
-      gsap.fromTo(
-        ".visit-media img",
-        { scale: 1.3, yPercent: -8 },
-        {
-          scale: 1.05,
-          yPercent: 8,
-          ease: "none",
-          scrollTrigger: { trigger: ".visit-media", start: "top bottom", end: "bottom top", scrub: true },
-        }
-      );
     },
     { scope: root }
   );
@@ -47,6 +36,11 @@ export default function Visit() {
           <SplitReveal as="h2" className="display">
             {brand.address[0]}, <em>{brand.address[1]}</em>
           </SplitReveal>
+          <Reveal className="visit-address" delay={0.1}>
+            {brand.addressLines.map((l) => (
+              <p key={l}>{l}</p>
+            ))}
+          </Reveal>
 
           <Reveal className="visit-cols" delay={0.2}>
             <div>
@@ -62,16 +56,26 @@ export default function Visit() {
             </div>
           </Reveal>
 
-          <Reveal delay={0.3}>
+          <Reveal delay={0.3} className="visit-actions">
             <a href="/inquiry" className="btn btn-outline-light">
               <span>Book a Consultation</span>
+              <ArrowUpRight width={18} />
+            </a>
+            <a href={brand.mapUrl} target="_blank" rel="noreferrer" className="btn btn-outline-light">
+              <span>Get Directions</span>
               <ArrowUpRight width={18} />
             </a>
           </Reveal>
         </div>
 
-        <div className="visit-media" data-cursor="Visit">
-          <Image src="/media/mirror.jpg" alt="A client in a robe applying a calming cream at the studio mirror" fill sizes="(max-width: 900px) 100vw, 50vw" />
+        <div className="visit-media visit-map">
+          <iframe
+            src={mapEmbedUrl}
+            title={`Map: ${brand.name}, ${brand.addressLine}`}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+          />
           <span className="roam-anchor visit-roam" data-roam data-roam-scale="1" />
         </div>
       </div>

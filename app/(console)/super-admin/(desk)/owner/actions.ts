@@ -16,11 +16,11 @@ const staffSchema = z.object({
   specialty: z.string().trim().optional(),
 });
 
-/** The staff list and the website's Doctors section and page all read staff rows. */
+/** The staff list and the website's Team section and page all read staff rows. */
 function revalidateStaff() {
   revalidatePath("/super-admin/owner/staff");
   revalidatePath("/");
-  revalidatePath("/doctors");
+  revalidatePath("/team");
 }
 
 /**

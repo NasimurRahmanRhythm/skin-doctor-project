@@ -104,7 +104,7 @@ export default function Hero() {
           <span className="scroll-cue-line" />
           Scroll
         </a>
-        <span>{brand.addressLine}</span>
+        <span>{brand.address.join(", ")}</span>
       </div>
 
       <span className="roam-anchor hero-roam" data-roam data-roam-scale="1.15" />

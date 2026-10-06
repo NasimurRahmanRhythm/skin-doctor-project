@@ -20,10 +20,23 @@ export const brand = {
   phone: CLINIC_PHONE,
   /** One line, as printed on the prescription. */
   addressLine: CLINIC_ADDRESS,
-  /** The same address split for display: area, then city. */
+  /** The full address over a few lines, for the footer and the location band. */
+  addressLines: ["Level-9, BTI Armitage", "House 77, Road 12", "Banani, Dhaka 1213"],
+  /** Just the area, then the city: the headline, and where one short line fits. */
   address: ["Banani", "Dhaka"],
   hours: ["Open every day", "11:30 am – 8:00 pm"],
+  /** The clinic's Google Maps share link; "Get directions" opens it. */
+  mapUrl: "https://maps.app.goo.gl/5K9tGMrZsKLmS5499",
+  /**
+   * Where the embedded map drops its pin: the clinic's exact coordinates. A
+   * share link cannot be embedded, and an address search can land on the
+   * wrong building, so the pin goes by these.
+   */
+  mapQuery: "23.792443629506643,90.40841004952195",
 };
+
+/** The Google Maps embed for brand.mapQuery; needs no API key. */
+export const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(brand.mapQuery)}&z=16&output=embed`;
 
 /** The hours on one line, for places with room for only one. */
 export const hoursLine = brand.hours.join(" · ");
@@ -34,7 +47,10 @@ export const hoursLine = brand.hours.join(" · ");
  */
 export const nav = [
   { label: "Treatments", href: "/#treatments" },
-  { label: "Packages", href: "/#packages" },
+  // Hidden for now along with their landing-page sections (app/(site)/page.tsx).
+  // Uncomment both together to bring them back.
+  // { label: "Our Team", href: "/#team" },
+  // { label: "Packages", href: "/#packages" },
   { label: "Results", href: "/#results" },
   { label: "Reviews", href: "/#reviews" },
   { label: "About", href: "/#about" },
@@ -89,7 +105,7 @@ export const about = {
 
 export const teamIntro = {
   kicker: "Meet the team",
-  title: "Our Doctors",
+  title: "Our Team",
   body: "Board-certified expertise, delivered by people who take the time to know your skin.",
 };
 
@@ -139,5 +155,4 @@ export const inquiry = {
 export const footer = {
   blurb: "A boutique skin & body studio focused on unhurried, personal care.",
   legal: "© 2026 DermaSoul Medical Aesthetics. Demo template — placeholder content.",
-  links: ["Privacy", "Terms", "Accessibility"],
 };

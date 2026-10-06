@@ -63,7 +63,7 @@ function Head({ as = "h2" }: { as?: "h1" | "h2" }) {
       <div>
         <span className="kicker">{teamIntro.kicker}</span>
         <SplitReveal as={as} className="display">
-          Our <em>Doctors</em>
+          Our <em>Team</em>
         </SplitReveal>
       </div>
       <Reveal className="sec-lede">
@@ -85,7 +85,7 @@ function Grid({ doctors }: { doctors: SiteDoctor[] }) {
   );
 }
 
-/** The landing page's first four doctors, and the way to the rest. */
+/** The landing page's first four team members, and the way to the rest. */
 export default function Team({ doctors }: { doctors: SiteDoctor[] }) {
   if (doctors.length === 0) return null;
 
@@ -95,8 +95,8 @@ export default function Team({ doctors }: { doctors: SiteDoctor[] }) {
         <Head />
         <Grid doctors={doctors} />
         <div className="see-more">
-          <a href="/doctors" className="btn btn-outline">
-            <span>See all doctors</span>
+          <a href="/team" className="btn btn-outline">
+            <span>See the whole team</span>
             <Arrow width={18} />
           </a>
         </div>
@@ -105,8 +105,8 @@ export default function Team({ doctors }: { doctors: SiteDoctor[] }) {
   );
 }
 
-/** /doctors: every doctor the owner shows on the website. */
-export function DoctorCatalog({ doctors }: { doctors: SiteDoctor[] }) {
+/** /team: every team member the owner shows on the website. */
+export function TeamCatalog({ doctors }: { doctors: SiteDoctor[] }) {
   return (
     <section className="team page-section" id="team">
       <div className="wrap">
@@ -114,7 +114,7 @@ export function DoctorCatalog({ doctors }: { doctors: SiteDoctor[] }) {
         {doctors.length ? (
           <Grid doctors={doctors} />
         ) : (
-          <p className="page-empty">Our doctors will be introduced here soon.</p>
+          <p className="page-empty">Our team will be introduced here soon.</p>
         )}
       </div>
     </section>

@@ -3,12 +3,22 @@
 import Image from "next/image";
 import { motion } from "motion/react";
 import { brand, footer } from "@/lib/site/content";
-import { Instagram } from "@/components/site/Icons";
+import type { SiteSocialLink, SocialNetwork } from "@/lib/site/data";
+import { Facebook, Instagram, LinkedIn, XLogo, YouTube } from "@/components/site/Icons";
+
+const NETWORK_ICON: Record<SocialNetwork, typeof Instagram> = {
+  facebook: Facebook,
+  instagram: Instagram,
+  x: XLogo,
+  linkedin: LinkedIn,
+  youtube: YouTube,
+};
 
 /** All gold, as in the header; "Soul" takes the italic, echoing the script in the logo. */
 const WORD = ["Derma", "Soul"];
 
-export default function Footer() {
+/** `social`: the profiles the owner set under Social media; each shows as an icon. */
+export default function Footer({ social = [] }: { social?: SiteSocialLink[] }) {
   return (
     <footer className="footer dark">
       <div className="wrap">
@@ -22,10 +32,29 @@ export default function Footer() {
               className="foot-logo"
             />
             <p>{footer.blurb}</p>
+            {social.length > 0 && (
+              <div className="foot-social">
+                {social.map((s) => {
+                  const Icon = NETWORK_ICON[s.network];
+                  return (
+                    <a
+                      key={s.network}
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={s.label}
+                      title={s.label}
+                    >
+                      <Icon width={18} />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <div>
             <h4>Visit</h4>
-            {brand.address.map((l) => (
+            {brand.addressLines.map((l) => (
               <p key={l}>{l}</p>
             ))}
           </div>
@@ -64,15 +93,6 @@ export default function Footer() {
 
       <div className="wrap foot-bottom">
         <span>{footer.legal}</span>
-        <span className="foot-links">
-          {footer.links.map((l) => (
-            <a key={l} href="#top">
-              {l}
-            </a>
-          ))}
-          {/* The console lives in the same app; staff used to reach it from the old home page. */}
-          <a href="/super-admin">Staff sign in</a>
-        </span>
       </div>
     </footer>
   );

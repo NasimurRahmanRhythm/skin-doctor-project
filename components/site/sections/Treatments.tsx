@@ -1,44 +1,30 @@
 "use client";
 
+import { useEffect } from "react";
+import Link from "next/link";
 import { treatmentsIntro } from "@/lib/site/content";
 import type { SiteTreatment } from "@/lib/site/data";
 import { excerpt } from "@/lib/site/excerpt";
 import { useQueryParam } from "@/lib/site/use-query-param";
 import SplitReveal from "@/components/site/fx/SplitReveal";
 import Reveal from "@/components/site/fx/Reveal";
-import SiteModal from "@/components/site/SiteModal";
 import { Arrow } from "@/components/site/Icons";
 
 /**
  * Athena's concern grid, recast as an editorial index: a long list of rows,
- * each a title and the first sentence or two of its description. Hovering
- * shifts the row and warms the title; there are no pictures.
+ * each a title and the first sentence or two of its introduction, opening the
+ * treatment's own page. Hovering shifts the row and warms the title; there
+ * are no pictures.
  */
-function Rows({
-  items,
-  onOpen,
-}: {
-  items: SiteTreatment[];
-  /** On /treatments a row opens its window; on the landing page it links there. */
-  onOpen?: (t: SiteTreatment) => void;
-}) {
+function Rows({ items, start = 0 }: { items: SiteTreatment[]; start?: number }) {
   return (
     <div className="treat-list">
       {items.map((t, i) => (
         <Reveal key={t.id} delay={Math.min(i, 8) * 0.05} y={30}>
-          <a
-            href={`/treatments?t=${t.id}`}
-            className="treat-row"
-            data-cursor="Read"
-            onClick={(e) => {
-              if (!onOpen) return;
-              e.preventDefault();
-              onOpen(t);
-            }}
-          >
-            <span className="treat-idx">{String(i + 1).padStart(2, "0")}</span>
+          <a href={`/treatments/${t.href}`} className="treat-row" data-cursor="Read">
+            <span className="treat-idx">{String(start + i + 1).padStart(2, "0")}</span>
             <h3 className="treat-title">{t.title}</h3>
-            <p className="treat-body">{excerpt(t.description)}</p>
+            <p className="treat-body">{excerpt(t.description ?? t.subtitle ?? "")}</p>
             <span className="treat-arrow">
               <Arrow width={20} />
             </span>
@@ -75,46 +61,63 @@ export default function Treatments({ items }: { items: SiteTreatment[] }) {
         <Head />
         <Rows items={items} />
         <div className="see-more">
-          <a href="/treatments" className="btn btn-outline">
+          <Link href="/treatments" className="btn btn-outline">
             <span>See all treatments</span>
             <Arrow width={18} />
-          </a>
+          </Link>
         </div>
       </div>
     </section>
   );
 }
 
-/** /treatments: every treatment, each opening in a window with its full text. */
+/**
+ * Treatments by category, in the order each category first appears in the
+ * owner's list, as Athena groups hers under Dermatology, Aesthetics and Hair.
+ * Uncategorised ones come last; with no categories at all, one plain list.
+ */
+function byCategory(items: SiteTreatment[]): { name: string | null; items: SiteTreatment[] }[] {
+  const groups = new Map<string, { name: string | null; items: SiteTreatment[] }>();
+  for (const t of items) {
+    const name = t.category?.trim() || null;
+    const key = name?.toLowerCase() ?? "";
+    if (!groups.has(key)) groups.set(key, { name, items: [] });
+    groups.get(key)!.items.push(t);
+  }
+  const list = [...groups.values()];
+  return [...list.filter((g) => g.name), ...list.filter((g) => !g.name)];
+}
+
+/** /treatments: every treatment, grouped, each row opening its own page. */
 export function TreatmentCatalog({ items }: { items: SiteTreatment[] }) {
-  const [openId, setOpenId] = useQueryParam("t");
-  const open = items.find((t) => t.id === openId) ?? null;
-  const show = (t: SiteTreatment | null) => setOpenId(t?.id ?? null);
+  // Treatments used to open in a window here, at /treatments?t=<id>; send
+  // those old links on to the treatment's own page.
+  const [oldId] = useQueryParam("t");
+  useEffect(() => {
+    const old = oldId ? items.find((t) => t.id === oldId) : undefined;
+    if (old) window.location.replace(`/treatments/${old.href}`);
+  }, [oldId, items]);
+
+  const groups = byCategory(items);
+  const titled = groups.some((g) => g.name);
+  // The numbering runs on across groups.
+  const starts = groups.map((_, i) => groups.slice(0, i).reduce((n, g) => n + g.items.length, 0));
 
   return (
     <section className="treatments page-section" id="treatments">
       <div className="wrap">
         <Head as="h1" />
-        {items.length ? (
-          <Rows items={items} onOpen={show} />
-        ) : (
+        {items.length === 0 ? (
           <p className="page-empty">Treatments will be listed here soon.</p>
+        ) : (
+          groups.map((g, i) => (
+            <div key={g.name ?? "other"} className="treat-group">
+              {titled && <h2 className="treat-group-title">{g.name ?? "More treatments"}</h2>}
+              <Rows items={g.items} start={starts[i]} />
+            </div>
+          ))
         )}
       </div>
-
-      <SiteModal open={!!open} onClose={() => show(null)} label={open?.title ?? "Treatment"}>
-        {open && (
-          <>
-            <span className="kicker">Treatment</span>
-            <h2 className="site-modal-title">{open.title}</h2>
-            <p className="site-modal-text">{open.description}</p>
-            <a href={`/inquiry?about=${encodeURIComponent(open.title)}`} className="btn btn-dark">
-              <span>Book a Consultation</span>
-              <Arrow width={18} />
-            </a>
-          </>
-        )}
-      </SiteModal>
     </section>
   );
 }

@@ -11,7 +11,7 @@ export const CLINIC_TZ = "Asia/Dhaka";
  * The main clinic, as printed on the prescription footer and shown on the
  * website. One place, so the two never disagree.
  */
-export const CLINIC_ADDRESS = "Banani, Dhaka";
+export const CLINIC_ADDRESS = "Level-9, BTI Armitage, House 77, Road 12, Banani, Dhaka 1213";
 // TODO: the real number has not been given yet.
 export const CLINIC_PHONE = "+880 0000 000000";
 

@@ -5,9 +5,15 @@ import { publicImageUrl } from "@/lib/site-media";
 import { createClient } from "@/lib/supabase/server";
 import { SECTIONS, sectionByKey } from "@/lib/website-sections";
 import SectionManager, { type ManagedRow } from "./section-manager";
-import { GoogleReviewsForm, InstagramProfileForm } from "./settings-forms";
+import { GoogleReviewsForm, SocialLinksForm, type SocialLinks } from "./settings-forms";
 
-const TABS = [...SECTIONS.map((s) => ({ key: s.key as string, label: s.tab })), { key: "reviews", label: "Google reviews" }];
+const TABS = [
+  ...SECTIONS.map((s) => ({ key: s.key as string, label: s.tab })),
+  // The Google reviews tab is hidden for now. Uncomment to bring it back —
+  // the form below still handles it. While hidden, ?tab=reviews falls back
+  // to the first tab.
+  // { key: "reviews", label: "Google reviews" },
+];
 
 /**
  * The website's content, one list per tab. Everything here shows on the
@@ -36,27 +42,38 @@ export default async function WebsitePage({
       const images: Record<string, string | null> = {};
       for (const f of def.fields) {
         const v = r[f.name];
-        values[f.name] = typeof v === "string" ? v : null;
+        // FAQ pairs and picked ids arrive as arrays; the form reads them back as JSON.
+        values[f.name] = typeof v === "string" ? v : v == null ? null : JSON.stringify(v);
         if (f.type === "image") images[f.name] = publicImageUrl("site-media", values[f.name]);
       }
       return { id: String(r.id), is_active: r.is_active === true, values, images };
     });
 
-    let profile = { url: "", handle: "" };
+    // The Social media tab: the profile links above the Instagram posts.
+    let social: SocialLinks | null = null;
     if (def.key === "instagram") {
-      const { data: s } = await supabase
+      const { data: settings } = await supabase
         .from("site_settings")
-        .select("value")
-        .eq("key", "instagram")
-        .maybeSingle();
-      const v = (s?.value ?? {}) as { url?: string; handle?: string | null };
-      profile = { url: v.url ?? "", handle: v.handle ?? "" };
+        .select("key, value")
+        .in("key", ["instagram", "social"]);
+      const get = (key: string) =>
+        (settings?.find((s) => s.key === key)?.value ?? {}) as Record<string, string | null | undefined>;
+      const ig = get("instagram");
+      const other = get("social");
+      social = {
+        instagram: ig.url ?? "",
+        handle: ig.handle ?? "",
+        facebook: other.facebook ?? "",
+        x: other.x ?? "",
+        linkedin: other.linkedin ?? "",
+        youtube: other.youtube ?? "",
+      };
     }
 
     body = (
       <div className="space-y-6">
         {error && <MigrationNotice message={error.message} />}
-        {def.key === "instagram" && <InstagramProfileForm url={profile.url} handle={profile.handle} />}
+        {social && <SocialLinksForm links={social} />}
         <SectionManager def={def} rows={rows} />
       </div>
     );

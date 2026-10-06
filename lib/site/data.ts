@@ -50,10 +50,99 @@ const media = (path: string | null) => publicImageUrl("site-media", path);
 
 // ------------------------------------------------------------------ lists --
 
-export type SiteTreatment = { id: string; title: string; description: string };
+/** One treatment and its page. Every part but the name may be missing. */
+export type SiteTreatment = {
+  id: string;
+  /** Where its page lives: /treatments/<href>, the slug or else the id. */
+  href: string;
+  title: string;
+  category: string | null;
+  subtitle: string | null;
+  image: string | null;
+  /** The introduction; the landing page shows its first sentences. */
+  description: string | null;
+  whatToExpect: string | null;
+  resultsRecovery: string | null;
+  beforeCare: string | null;
+  afterCare: string | null;
+  faqs: { q: string; a: string }[];
+  closingTitle: string | null;
+  closingBody: string | null;
+  relatedIds: string[];
+};
 
-export function getTreatments(limit?: number) {
-  return rows<SiteTreatment>("site_treatments", "id, title, description", { limit });
+type TreatmentRow = {
+  id: string;
+  slug: string | null;
+  title: string | null;
+  category: string | null;
+  subtitle: string | null;
+  image_path: string | null;
+  description: string | null;
+  what_to_expect: string | null;
+  results_recovery: string | null;
+  before_care: string | null;
+  after_care: string | null;
+  faqs: unknown;
+  closing_title: string | null;
+  closing_body: string | null;
+  related_ids: string[] | null;
+};
+
+const TREATMENT_COLUMNS =
+  "id, slug, title, category, subtitle, image_path, description, what_to_expect, results_recovery, before_care, after_care, faqs, closing_title, closing_body, related_ids";
+
+function toTreatment(r: TreatmentRow & { title: string }): SiteTreatment {
+  const faqs = Array.isArray(r.faqs) ? (r.faqs as { q?: unknown; a?: unknown }[]) : [];
+  return {
+    id: r.id,
+    href: r.slug || r.id,
+    title: r.title,
+    category: r.category,
+    subtitle: r.subtitle,
+    image: media(r.image_path),
+    description: r.description,
+    whatToExpect: r.what_to_expect,
+    resultsRecovery: r.results_recovery,
+    beforeCare: r.before_care,
+    afterCare: r.after_care,
+    faqs: faqs
+      .map((f) => ({ q: typeof f?.q === "string" ? f.q : "", a: typeof f?.a === "string" ? f.a : "" }))
+      .filter((f) => f.q),
+    closingTitle: r.closing_title,
+    closingBody: r.closing_body,
+    relatedIds: r.related_ids ?? [],
+  };
+}
+
+/**
+ * The shown treatments, in the owner's order. One saved without a title has
+ * nothing to be called on the website, so it is left out (and the landing
+ * page's `limit` counts only the ones with a title).
+ */
+export async function getTreatments(limit?: number): Promise<SiteTreatment[]> {
+  const data = await rows<TreatmentRow>("site_treatments", TREATMENT_COLUMNS);
+  const named = data.filter((r): r is TreatmentRow & { title: string } => !!r.title?.trim());
+  return named.slice(0, limit ?? named.length).map(toTreatment);
+}
+
+/** The treatment a /treatments/<slug-or-id> page is for, or null. */
+export async function getTreatment(
+  key: string,
+): Promise<{ treatment: SiteTreatment; similar: SiteTreatment[] } | null> {
+  const all = await getTreatments();
+  const treatment = all.find((t) => t.href === key || t.id === key);
+  if (!treatment) return null;
+
+  // Hand-picked first, in the owner's list order; else the same category.
+  const others = all.filter((t) => t.id !== treatment.id);
+  const picked = others.filter((t) => treatment.relatedIds.includes(t.id));
+  const similar = picked.length
+    ? picked
+    : treatment.category
+      ? others.filter((t) => t.category?.toLowerCase() === treatment.category?.toLowerCase())
+      : [];
+  return { treatment, similar: similar.slice(0, 8) };
 }
 
 export type SitePackage = {
@@ -192,6 +281,30 @@ export async function getInstagram(): Promise<SiteInstagram | null> {
       return image ? [{ id: p.id, url: p.url, image }] : [];
     }),
   };
+}
+
+export type SocialNetwork = "facebook" | "instagram" | "x" | "linkedin" | "youtube";
+export type SiteSocialLink = { network: SocialNetwork; label: string; url: string };
+
+const NETWORK_LABEL: Record<SocialNetwork, string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  x: "X",
+  linkedin: "LinkedIn",
+  youtube: "YouTube",
+};
+
+/** The profiles the owner has set, in footer order; [] when none. */
+export async function getSocialLinks(): Promise<SiteSocialLink[]> {
+  const [instagram, other] = await Promise.all([
+    setting<{ url?: string }>("instagram"),
+    setting<Partial<Record<Exclude<SocialNetwork, "instagram">, string>>>("social"),
+  ]);
+  const urls: Partial<Record<SocialNetwork, string>> = { ...other, instagram: instagram?.url };
+  return (Object.keys(NETWORK_LABEL) as SocialNetwork[]).flatMap((network) => {
+    const url = urls[network];
+    return url ? [{ network, label: NETWORK_LABEL[network], url }] : [];
+  });
 }
 
 /** "https://www.instagram.com/dermasoul.aesthetics/" → "@dermasoul.aesthetics". */

@@ -54,7 +54,31 @@ export async function saveItem(_prev: WebsiteState, formData: FormData): Promise
   // ---- text fields
   const row: Record<string, unknown> = { ...(def.fixed ?? {}) };
   for (const f of def.fields) {
-    if (f.type === "image") continue;
+    if (f.type === "image" || f.type === "slug") continue;
+
+    if (f.type === "faq") {
+      // Posted as parallel <name>_q / <name>_a inputs; a pair left blank is dropped.
+      const qs = formData.getAll(`${f.name}_q`).map((v) => String(v).trim());
+      const as = formData.getAll(`${f.name}_a`).map((v) => String(v).trim());
+      const pairs = qs.map((q, i) => ({ q, a: as[i] ?? "" })).filter((p) => p.q || p.a);
+      if (f.required && pairs.length === 0) return { error: `${f.label} is required.` };
+      if (f.max && pairs.some((p) => p.q.length > f.max! || p.a.length > f.max!)) {
+        return { error: `A question or answer is too long (max ${f.max} characters).` };
+      }
+      row[f.name] = pairs;
+      continue;
+    }
+
+    if (f.type === "relations") {
+      // Ids of other rows in this list; a row cannot list itself.
+      const ids = [...new Set(formData.getAll(f.name).map(String))].filter(
+        (v) => uuid.safeParse(v).success && v !== id,
+      );
+      if (f.required && ids.length === 0) return { error: `${f.label} is required.` };
+      row[f.name] = ids;
+      continue;
+    }
+
     const value = String(formData.get(f.name) ?? "").trim();
     if (!value) {
       if (f.required) return { error: `${f.label} is required.` };
@@ -68,6 +92,26 @@ export async function saveItem(_prev: WebsiteState, formData: FormData): Promise
       return { error: f.patternMessage ?? `${f.label} is not valid.` };
     }
     row[f.name] = value;
+  }
+
+  // ---- web addresses: typed (and tidied), or made from another field; never shared
+  for (const f of def.fields) {
+    if (f.type !== "slug") continue;
+    const typed = String(formData.get(f.name) ?? "").trim();
+    const base = slugify(typed || String(row[f.from ?? ""] ?? ""), f.max);
+    if (!base) {
+      if (f.required) return { error: `${f.label} is required.` };
+      row[f.name] = null;
+      continue;
+    }
+    const taken = new Set<string>();
+    let q = supabase.from(def.table).select(`id, ${f.name}`).like(f.name, `${base}%`);
+    if (id) q = q.neq("id", id);
+    for (const r of ((await q).data ?? []) as unknown as Record<string, string>[]) taken.add(r[f.name]);
+    if (typed && taken.has(base)) return { error: `Another ${def.noun} already uses the address “${base}”.` };
+    let slug = base;
+    for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
+    row[f.name] = slug;
   }
 
   // ---- pictures: check everything before uploading anything
@@ -138,6 +182,18 @@ export async function saveItem(_prev: WebsiteState, formData: FormData): Promise
     notice: existing ? "Saved." : `The ${def.noun} was added.`,
     savedAt: Date.now(),
   };
+}
+
+/** "Acne & Acne Scars" → "acne-acne-scars": lowercase letters, digits, single dashes. */
+function slugify(text: string, max = 120): string {
+  return text
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, max)
+    .replace(/-+$/, "");
 }
 
 // ------------------------------------------------------- row operations --
@@ -216,30 +272,57 @@ const instagramSchema = z.object({
   handle: z.string().trim().max(60),
 });
 
-/** The clinic's Instagram profile. An empty link removes it. */
-export async function saveInstagramProfile(
-  _prev: WebsiteState,
-  formData: FormData,
-): Promise<WebsiteState> {
+/** An optional profile link on one network: empty, or a link to that site. */
+const profileLink = (pattern: RegExp, message: string) =>
+  z.string().trim().max(300).refine((v) => v === "" || pattern.test(v), message);
+
+const socialSchema = z.object({
+  facebook: profileLink(/^https:\/\/((www|m|web)\.)?(facebook|fb)\.com\/\S+/i, "Use the Facebook page's facebook.com link."),
+  x: profileLink(/^https:\/\/(www\.)?(x|twitter)\.com\/\S+/i, "Use the X profile's x.com link."),
+  linkedin: profileLink(/^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/\S+/i, "Use the LinkedIn page's linkedin.com link."),
+  youtube: profileLink(/^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be)\/\S+/i, "Use the YouTube channel's youtube.com link."),
+});
+
+/**
+ * The clinic's social media profiles. Instagram is stored on its own (the
+ * Instagram section and the floating button read it); the others together
+ * under "social". Every link is optional, and an empty one removes it.
+ */
+export async function saveSocialLinks(_prev: WebsiteState, formData: FormData): Promise<WebsiteState> {
   await requireRole("owner");
-  const supabase = await createClient();
 
-  const url = String(formData.get("url") ?? "").trim();
-  if (!url) {
-    await supabase.from("site_settings").delete().eq("key", "instagram");
-    revalidateSite();
-    return { notice: "Instagram profile removed.", savedAt: Date.now() };
-  }
+  // Check everything before writing anything.
+  const igUrl = String(formData.get("instagram") ?? "").trim();
+  const ig = igUrl ? instagramSchema.safeParse({ url: igUrl, handle: formData.get("handle") ?? "" }) : null;
+  if (ig && !ig.success) return { error: ig.error.issues[0]?.message };
 
-  const parsed = instagramSchema.safeParse({ url, handle: formData.get("handle") ?? "" });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
-
-  const { error } = await supabase.from("site_settings").upsert({
-    key: "instagram",
-    value: { url: parsed.data.url, handle: parsed.data.handle || null },
-    updated_at: new Date().toISOString(),
+  const others = socialSchema.safeParse({
+    facebook: formData.get("facebook") ?? "",
+    x: formData.get("x") ?? "",
+    linkedin: formData.get("linkedin") ?? "",
+    youtube: formData.get("youtube") ?? "",
   });
-  if (error) return { error: error.message };
+  if (!others.success) return { error: others.error.issues[0]?.message };
+
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+
+  const igWrite = ig?.success
+    ? supabase.from("site_settings").upsert({
+        key: "instagram",
+        value: { url: ig.data.url, handle: ig.data.handle || null },
+        updated_at: now,
+      })
+    : supabase.from("site_settings").delete().eq("key", "instagram");
+
+  const links = Object.fromEntries(Object.entries(others.data).filter(([, v]) => v));
+  const socialWrite = Object.keys(links).length
+    ? supabase.from("site_settings").upsert({ key: "social", value: links, updated_at: now })
+    : supabase.from("site_settings").delete().eq("key", "social");
+
+  const results = await Promise.all([igWrite, socialWrite]);
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { error: failed.error.message };
 
   revalidateSite();
   return { notice: "Saved.", savedAt: Date.now() };

@@ -7,7 +7,13 @@
  * is imported by both the client form and the server action.
  */
 
-export type FieldType = "text" | "textarea" | "url" | "image";
+/**
+ * text/textarea/url/image are one column each. The rest are treatment-page
+ * extras: "slug" is a web address made from another field when left blank,
+ * "faq" is a list of question/answer pairs (a jsonb array), and "relations"
+ * picks other rows of the same list (a uuid array).
+ */
+export type FieldType = "text" | "textarea" | "url" | "image" | "slug" | "faq" | "relations";
 
 export type FieldDef = {
   name: string;
@@ -20,6 +26,12 @@ export type FieldDef = {
   /** For urls: what the link must look like, and what to say if it does not. */
   pattern?: string;
   patternMessage?: string;
+  /** For slugs: the field the address is made from when left blank. */
+  from?: string;
+  /** Starts a new block in the form, under this heading. */
+  group?: string;
+  /** Suggestions offered while typing (text fields). */
+  suggestions?: string[];
 };
 
 export type SectionKey =
@@ -68,20 +80,97 @@ export const SECTIONS: SectionDef[] = [
     table: "site_treatments",
     tab: "Treatments",
     title: "Treatments",
-    hint: "The landing page shows the first 6 with the first one or two sentences of each; “See more” opens the full list, and each treatment opens in a window with its whole description.",
+    hint: "Every field is optional; save a treatment half-written and finish it later. Each one gets its own page, laid out like athenaderma.com: the picture and name, the introduction, then What to expect, Results and recovery, Before and After as folding sections, the FAQ, a closing call to book, and Similar treatments. A part left empty is simply not shown. A treatment without a title stays off the website. The landing page shows the first 6.",
     noun: "treatment",
     titleField: "title",
-    subField: "description",
+    subField: "category",
     fields: [
-      { name: "title", label: "Title", type: "text", required: true, max: 120, placeholder: "e.g. Acne & Acne Scar Treatment" },
+      { name: "title", label: "Title", type: "text", max: 120, placeholder: "e.g. Microneedling", group: "Basics" },
+      {
+        name: "category",
+        label: "Category",
+        type: "text",
+        max: 60,
+        placeholder: "e.g. Aesthetics",
+        hint: "Treatments are grouped under this on the Treatments page.",
+        suggestions: ["Dermatology", "Aesthetics", "Hair"],
+      },
+      {
+        name: "subtitle",
+        label: "Line under the name",
+        type: "text",
+        max: 200,
+        placeholder: "e.g. Profhilo, Volite, Restylane Vital and more",
+      },
+      {
+        name: "slug",
+        label: "Page address",
+        type: "slug",
+        from: "title",
+        max: 120,
+        placeholder: "e.g. microneedling",
+        hint: "The end of the page's link: /treatments/microneedling. Leave empty to make it from the title.",
+      },
+      { name: "image_path", label: "Picture", type: "image", hint: "The top of the page, and its card under Similar treatments." },
       {
         name: "description",
-        label: "Description",
+        label: "Introduction",
         type: "textarea",
-        required: true,
-        max: 5000,
-        placeholder: "What the treatment is, who it is for, how many sessions…",
-        hint: "The first 1–2 sentences are shown on the landing page.",
+        max: 10000,
+        placeholder: "What the treatment is, how it works, who it is for…",
+        hint: "Leave a blank line between paragraphs. The first 1–2 sentences are shown on the landing page.",
+        group: "Page sections",
+      },
+      {
+        name: "what_to_expect",
+        label: "What to expect",
+        type: "textarea",
+        max: 10000,
+        placeholder: "How a session goes, how long it takes, how it feels…",
+      },
+      {
+        name: "results_recovery",
+        label: "Results and recovery",
+        type: "textarea",
+        max: 10000,
+        placeholder: "When results show, how long they last, how many sessions…",
+      },
+      {
+        name: "before_care",
+        label: "Before the treatment",
+        type: "textarea",
+        max: 10000,
+        placeholder: "e.g. Avoid sun exposure for two weeks before…",
+      },
+      {
+        name: "after_care",
+        label: "After the treatment",
+        type: "textarea",
+        max: 10000,
+        placeholder: "e.g. Expect mild redness for 24–48 hours…",
+      },
+      { name: "faqs", label: "Questions and answers", type: "faq", max: 3000, group: "FAQ" },
+      {
+        name: "closing_title",
+        label: "Closing heading",
+        type: "text",
+        max: 200,
+        placeholder: "e.g. Reveal a new layer of confidence",
+        group: "Closing",
+      },
+      {
+        name: "closing_body",
+        label: "Closing text",
+        type: "textarea",
+        max: 3000,
+        placeholder: "A short paragraph inviting the visitor to book.",
+      },
+      {
+        name: "related_ids",
+        label: "Similar treatments",
+        type: "relations",
+        hint: "Shown as cards at the bottom of the page, in the order of the list below. Leave all unticked to show others from the same category.",
+        group: "Similar treatments",
       },
     ],
   },
@@ -137,7 +226,7 @@ export const SECTIONS: SectionDef[] = [
   {
     key: "instagram",
     table: "site_instagram_posts",
-    tab: "Instagram",
+    tab: "Social media",
     title: "Instagram posts",
     hint: "Each picture on the website opens its own post on Instagram. The grid looks best with 6.",
     noun: "post",

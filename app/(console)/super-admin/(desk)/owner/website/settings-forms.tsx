@@ -6,7 +6,7 @@ import { btnGhost, btnPrimary, card, cardPad, field, fieldLabel, SectionHead } f
 import {
   refreshGoogleReviews,
   saveGoogleReviews,
-  saveInstagramProfile,
+  saveSocialLinks,
   type WebsiteState,
 } from "./actions";
 
@@ -25,39 +25,62 @@ function Status({ state }: { state: WebsiteState }) {
   return null;
 }
 
-/** The clinic's Instagram profile: the section's heading and button link here. */
-export function InstagramProfileForm({ url, handle }: { url: string; handle: string }) {
-  const [state, action] = useActionState<WebsiteState, FormData>(saveInstagramProfile, {});
+export type SocialLinks = {
+  instagram: string;
+  handle: string;
+  facebook: string;
+  x: string;
+  linkedin: string;
+  youtube: string;
+};
+
+const NETWORKS: { name: keyof SocialLinks; label: string; placeholder: string }[] = [
+  { name: "facebook", label: "Facebook", placeholder: "https://www.facebook.com/dermasoul" },
+  { name: "instagram", label: "Instagram", placeholder: "https://www.instagram.com/dermasoul.aesthetics/" },
+  { name: "x", label: "X (Twitter)", placeholder: "https://x.com/dermasoul" },
+  { name: "linkedin", label: "LinkedIn", placeholder: "https://www.linkedin.com/company/dermasoul" },
+  { name: "youtube", label: "YouTube channel", placeholder: "https://www.youtube.com/@dermasoul" },
+];
+
+/**
+ * The clinic's social media profiles. Each one set shows as an icon in the
+ * website's footer; Instagram also drives the Instagram section below.
+ */
+export function SocialLinksForm({ links }: { links: SocialLinks }) {
+  const [state, action] = useActionState<WebsiteState, FormData>(saveSocialLinks, {});
   return (
     <form action={action} className={`${card} ${cardPad}`}>
       <SectionHead
-        title="Instagram profile"
-        hint="The Instagram section's heading, its “View on Instagram” button and the floating Instagram button all open this profile. Leave the link empty to hide the section."
+        title="Social media"
+        hint="Every link is optional. Each one you add shows as an icon in the website's footer. The Instagram link also opens from the Instagram section's heading, its “View on Instagram” button and the floating Instagram button; leave it empty to hide that section."
       />
-      <div className="mt-5 grid gap-5 sm:grid-cols-[2fr_1fr]">
+      <div className="mt-5 grid gap-5 sm:grid-cols-2">
+        {NETWORKS.map((n) => (
+          <div key={n.name}>
+            <label htmlFor={`social-${n.name}`} className={fieldLabel}>
+              {n.label} <span className="font-medium text-muted">(optional)</span>
+            </label>
+            <input
+              id={`social-${n.name}`}
+              name={n.name}
+              type="url"
+              defaultValue={links[n.name]}
+              maxLength={300}
+              placeholder={n.placeholder}
+              className={`${field} mt-1.5`}
+            />
+          </div>
+        ))}
         <div>
-          <label htmlFor="ig-url" className={fieldLabel}>
-            Profile link
+          <label htmlFor="social-handle" className={fieldLabel}>
+            Instagram handle <span className="font-medium text-muted">(optional)</span>
           </label>
           <input
-            id="ig-url"
-            name="url"
-            type="url"
-            defaultValue={url}
-            placeholder="https://www.instagram.com/dermasoul.aesthetics/"
-            className={`${field} mt-1.5`}
-          />
-        </div>
-        <div>
-          <label htmlFor="ig-handle" className={fieldLabel}>
-            Handle <span className="font-medium text-muted">(optional)</span>
-          </label>
-          <input
-            id="ig-handle"
+            id="social-handle"
             name="handle"
-            defaultValue={handle}
+            defaultValue={links.handle}
             maxLength={60}
-            placeholder="Taken from the link if empty"
+            placeholder="Taken from the Instagram link if empty"
             className={`${field} mt-1.5`}
           />
         </div>

@@ -1045,6 +1045,12 @@ html.has-cursor .site-modal button {
 .visit-copy .display {
   font-size: clamp(2.4rem, 5vw, 5rem);
 }
+.visit-address {
+  margin-top: 24px;
+  color: var(--cream-soft);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
 .visit-cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1078,6 +1084,25 @@ html.has-cursor .site-modal button {
 }
 .visit-media img {
   object-fit: cover;
+}
+/* The map gets plain rounded corners: the arch would clip Google's controls. */
+.visit-map {
+  aspect-ratio: 4 / 3.4;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-dark);
+  background: var(--ink);
+}
+.visit-map iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.visit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
 }
 .visit-roam {
   left: 0;
@@ -1153,6 +1178,182 @@ html.has-cursor .site-modal button {
   color: var(--paper);
   transform: rotate(-45deg);
 }
+/* /treatments groups the rows by category, as Athena does. */
+.treat-group + .treat-group {
+  margin-top: clamp(56px, 7vw, 96px);
+}
+.treat-group-title {
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin-bottom: 18px;
+}
+
+/* ---------- a treatment's own page (/treatments/<slug>) ---------- */
+
+.tdetail-hero {
+  background: var(--ivory);
+  padding-bottom: clamp(70px, 9vw, 130px);
+  min-height: 0;
+}
+.tdetail-hero-grid {
+  display: grid;
+  gap: clamp(40px, 6vw, 100px);
+  align-items: center;
+}
+.tdetail-hero.has-image .tdetail-hero-grid {
+  grid-template-columns: 1.05fr 0.95fr;
+}
+.tdetail-hero .display {
+  font-size: clamp(2.6rem, 6vw, 5.6rem);
+}
+.tdetail-crumbs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 26px;
+  font-size: 0.74rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+.tdetail-crumbs a:hover {
+  color: var(--ink);
+}
+.tdetail-subtitle {
+  margin-top: 22px;
+  color: var(--ink-soft);
+  font-size: 1.1rem;
+  max-width: 520px;
+}
+.tdetail-hero-copy .btn {
+  margin-top: 36px;
+}
+.tdetail-hero-media {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: 999px 999px var(--radius) var(--radius);
+  overflow: hidden;
+  background: var(--sand);
+}
+.tdetail-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.tdetail-intro {
+  padding: clamp(80px, 10vw, 140px) 0;
+  background: var(--paper);
+}
+.tdetail-narrow {
+  max-width: 820px;
+}
+.tdetail-prose p {
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+.tdetail-prose p + p {
+  margin-top: 1.1em;
+}
+.tdetail-intro .tdetail-prose p:first-child {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.tdetail-section {
+  padding: clamp(90px, 11vw, 160px) 0;
+  background: var(--ivory);
+}
+.tdetail-faq {
+  background: var(--paper);
+}
+.tdetail-acc-body {
+  padding: 0 0 32px 64px;
+  max-width: 680px;
+}
+/* The FAQ pads each answer paragraph; here the block is padded once instead. */
+.faq-a .tdetail-acc-body p {
+  padding: 0;
+  max-width: none;
+}
+.tdetail-closing {
+  padding: clamp(100px, 12vw, 170px) 0;
+  text-align: center;
+}
+.tdetail-closing .tdetail-narrow {
+  margin-inline: auto;
+}
+.tdetail-closing .display {
+  font-size: clamp(2rem, 4.4vw, 3.8rem);
+}
+.tdetail-closing .tdetail-prose {
+  margin: 28px auto 0;
+  max-width: 640px;
+}
+.tdetail-closing .tdetail-prose p {
+  color: var(--cream-soft);
+}
+.tdetail-closing .btn {
+  margin-top: 40px;
+}
+.tdetail-similar {
+  padding: clamp(90px, 11vw, 160px) 0;
+  background: var(--paper);
+}
+.tdetail-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+}
+.tdetail-card {
+  display: block;
+}
+.tdetail-card-media {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--sand);
+}
+.tdetail-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.2s var(--ease);
+}
+.tdetail-card:hover .tdetail-card-media img {
+  transform: scale(1.06);
+}
+.tdetail-card-sprig {
+  width: 38%;
+  color: var(--gold-deep);
+  opacity: 0.55;
+}
+.tdetail-card-title {
+  margin-top: 18px;
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  transition: color 0.4s;
+}
+.tdetail-card:hover .tdetail-card-title {
+  color: var(--gold-deep);
+  font-style: italic;
+}
+.tdetail-card-sub {
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
 /* "See all treatments" and the other ways from a landing slice to its page. */
 .see-more {
   display: flex;
@@ -2375,12 +2576,27 @@ img.rev-avatar {
   font-size: 0.8rem;
   color: var(--cream-soft);
 }
-.foot-links {
+.foot-social {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
 }
-.foot-links a:hover {
-  color: var(--cream);
+.footer .foot-social a {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  border: 1px solid var(--line-dark);
+  border-radius: 50%;
+  color: var(--gold-soft);
+  transition: background 0.4s var(--ease), color 0.4s var(--ease), border-color 0.4s;
+}
+.footer .foot-social a:hover {
+  background: var(--gold-soft);
+  border-color: var(--gold-soft);
+  color: var(--espresso);
 }
 
 /* ---------- inner pages: /treatments, /packages, /products ---------- */
@@ -2597,6 +2813,19 @@ html.modal-open {
 }
 
 @media (max-width: 900px) {
+  .tdetail-hero.has-image .tdetail-hero-grid {
+    grid-template-columns: 1fr;
+  }
+  .tdetail-hero-media {
+    max-width: 460px;
+  }
+  .tdetail-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .tdetail-acc-body {
+    padding-left: 0;
+  }
   .roam {
     width: 84px;
   }

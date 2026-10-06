@@ -9,9 +9,10 @@ import Visit from "@/components/site/sections/Visit";
 import Treatments from "@/components/site/sections/Treatments";
 import About from "@/components/site/sections/About";
 import FeatureVideo from "@/components/site/sections/FeatureVideo";
-import Packages from "@/components/site/sections/Packages";
+// Hidden for now — see the note above <Team /> below.
+// import Packages from "@/components/site/sections/Packages";
 import Results from "@/components/site/sections/Results";
-import Team from "@/components/site/sections/Team";
+// import Team from "@/components/site/sections/Team";
 import Certifications from "@/components/site/sections/Certifications";
 import Reviews from "@/components/site/sections/Reviews";
 import Shop from "@/components/site/sections/Shop";
@@ -20,13 +21,14 @@ import Faq from "@/components/site/sections/Faq";
 import Cta from "@/components/site/sections/Cta";
 import Footer, { FabInstagram } from "@/components/site/sections/Footer";
 import {
-  getDoctors,
+  // getDoctors,
   getInstagram,
   getLinks,
-  getPackages,
+  // getPackages,
   getProducts,
   getResults,
   getReviews,
+  getSocialLinks,
   getTreatments,
 } from "@/lib/site/data";
 
@@ -37,25 +39,36 @@ import {
 export const revalidate = 3600;
 
 /*
- * Section order follows athenaderma.com: film hero → brand stamp → doctors →
+ * Section order follows athenaderma.com: film hero → brand stamp → team →
  * location → concerns → philosophy → popular treatments → journal. The
  * sections that Athena has no slot for (packages, results, shop) sit where
  * their neighbours make sense of them. Anything the owner has not filled in
  * yet hides itself.
  */
 export default async function Home() {
-  const [treatments, packages, results, doctors, press, certifications, reviews, products, instagram] =
-    await Promise.all([
-      getTreatments(6),
-      getPackages(3),
-      getResults(3),
-      getDoctors(4),
-      getLinks("press"),
-      getLinks("certification"),
-      getReviews(),
-      getProducts(4),
-      getInstagram(),
-    ]);
+  const [
+    treatments,
+    // packages,
+    results,
+    // doctors,
+    press,
+    certifications,
+    reviews,
+    products,
+    instagram,
+    social,
+  ] = await Promise.all([
+    getTreatments(6),
+    // getPackages(3),
+    getResults(3),
+    // getDoctors(4),
+    getLinks("press"),
+    getLinks("certification"),
+    getReviews(),
+    getProducts(4),
+    getInstagram(),
+    getSocialLinks(),
+  ]);
 
   return (
     <>
@@ -67,12 +80,17 @@ export default async function Home() {
       <main>
         <Hero />
         <Statement press={press} />
-        <Team doctors={doctors} />
+        {/*
+         * Our Team and Packages are hidden for now. To bring them back,
+         * uncomment them here together with their imports, their entries in
+         * the Promise.all above, and their nav links in lib/site/content.ts.
+         */}
+        {/* <Team doctors={doctors} /> */}
         <Visit />
         <Treatments items={treatments} />
         <About />
         <FeatureVideo />
-        <Packages items={packages} />
+        {/* <Packages items={packages} /> */}
         <Results items={results} />
         <Certifications items={certifications} />
         <Reviews data={reviews} />
@@ -81,7 +99,7 @@ export default async function Home() {
         <Faq />
         <Cta />
       </main>
-      <Footer />
+      <Footer social={social} />
       <RoamingBadge />
       <FabInstagram url={instagram?.url ?? null} />
       <div className="grain" aria-hidden />
