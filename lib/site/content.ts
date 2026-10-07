@@ -15,8 +15,7 @@ export const brand = {
   short: "DermaSoul",
   tagline: "Medical Aesthetics",
   byline: "by Dr. Nusrat Liza",
-  // Not given yet; still the template's placeholder.
-  email: "hello@dermasoul.demo",
+  email: "dermasoulmedicalae@gmail.com",
   phone: CLINIC_PHONE,
   /** One line, as printed on the prescription. */
   addressLine: CLINIC_ADDRESS,
