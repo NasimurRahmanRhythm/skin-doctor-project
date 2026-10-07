@@ -1866,8 +1866,12 @@ html.has-cursor .site-modal button {
 /* ---------- certifications ---------- */
 
 .certs {
-  padding: clamp(100px, 11vw, 160px) 0;
+  padding: clamp(60px, 7vw, 100px) 0;
   background: var(--ivory);
+}
+/* The band itself is the "As seen in" band; here it needs no top margin. */
+.press.certs-band {
+  margin-top: 0;
 }
 .certs .sec-head {
   margin-bottom: 56px;

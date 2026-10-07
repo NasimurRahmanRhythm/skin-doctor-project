@@ -12,8 +12,7 @@ export const CLINIC_TZ = "Asia/Dhaka";
  * website. One place, so the two never disagree.
  */
 export const CLINIC_ADDRESS = "Level-9, BTI Armitage, House 77, Road 12, Banani, Dhaka 1213";
-// TODO: the real number has not been given yet.
-export const CLINIC_PHONE = "+880 0000 000000";
+export const CLINIC_PHONE = "01711-956441";
 
 /** Bangladesh has observed no DST since 2009, so the offset is fixed. */
 const CLINIC_UTC_OFFSET = "+06:00";

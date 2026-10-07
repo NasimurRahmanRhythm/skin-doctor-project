@@ -206,7 +206,8 @@ export async function getProducts(limit?: number): Promise<SiteProduct[]> {
   return data.map(({ image_path, ...p }) => ({ ...p, image: media(image_path) }));
 }
 
-export type SiteLink = { id: string; title: string; url: string; logo: string | null };
+/** Every part is optional; an entry with neither a title nor a logo is left out. */
+export type SiteLink = { id: string; title: string | null; url: string | null; logo: string | null };
 
 /**
  * "As seen in" or the certifications, each with its logo if it has one.
@@ -214,12 +215,14 @@ export type SiteLink = { id: string; title: string; url: string; logo: string | 
  * the logo migration has not been run yet.
  */
 export async function getLinks(kind: "press" | "certification"): Promise<SiteLink[]> {
-  const data = await rows<{ id: string; title: string; url: string; logo_path?: string | null }>(
+  const data = await rows<{ id: string; title: string | null; url: string | null; logo_path?: string | null }>(
     "site_links",
     "*",
     { eq: ["kind", kind] },
   );
-  return data.map((l) => ({ id: l.id, title: l.title, url: l.url, logo: media(l.logo_path ?? null) }));
+  return data
+    .map((l) => ({ id: l.id, title: l.title || null, url: l.url || null, logo: media(l.logo_path ?? null) }))
+    .filter((l) => l.title || l.logo);
 }
 
 /** How many active rows a list has, for "See more". */

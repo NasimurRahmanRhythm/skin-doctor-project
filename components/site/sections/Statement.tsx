@@ -5,6 +5,7 @@ import { hero } from "@/lib/site/content";
 import type { SiteLink } from "@/lib/site/data";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/site/gsap";
 import { Sprig } from "@/components/site/Icons";
+import LinkMarquee from "@/components/site/LinkMarquee";
 
 /**
  * The brand stamp: the studio's one-line promise, read word by word as the
@@ -62,43 +63,7 @@ export default function Statement({ press }: { press: SiteLink[] }) {
         <span className="roam-anchor stmt-roam" data-roam data-roam-scale="0.9" />
       </div>
 
-      {press.length > 0 && (
-        <div className="press">
-          <span className="press-label">As seen in</span>
-          <div className="marquee">
-            <div className="marquee-track">
-              {[0, 1].map((dup) => (
-                <div className="marquee-group" key={dup} aria-hidden={dup === 1}>
-                  {/* Repeated so even one or two titles fill the band. */}
-                  {Array.from({ length: Math.max(2, Math.ceil(8 / press.length)) }, () => press)
-                    .flat()
-                    .map((p, i) => (
-                      <span key={i} className="press-name">
-                        <a
-                          href={p.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          // Only the first copy of each title is reachable by Tab.
-                          tabIndex={dup === 0 && i < press.length ? undefined : -1}
-                          data-cursor="Read"
-                          aria-label={p.logo ? p.title : undefined}
-                        >
-                          {p.logo ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- owner-uploaded logo from storage
-                            <img src={p.logo} alt="" className="press-logo" loading="lazy" />
-                          ) : (
-                            p.title
-                          )}
-                        </a>
-                        <i>✦</i>
-                      </span>
-                    ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <LinkMarquee label="As seen in" items={press} />
     </section>
   );
 }
