@@ -2262,6 +2262,19 @@ img.rev-avatar {
 .faq-item {
   border-bottom: 1px solid var(--line);
 }
+/* A group's heading sits above its first question. */
+.faq-group + .faq-group {
+  margin-top: 48px;
+}
+.faq-group-title {
+  padding: 28px 0 6px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  border-bottom: 1px solid var(--line);
+}
 .faq-q {
   width: 100%;
   display: grid;

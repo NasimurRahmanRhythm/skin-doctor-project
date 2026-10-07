@@ -122,22 +122,75 @@ export const social = {
   kicker: "Follow along",
 };
 
-export const faqs = [
+/** The landing page's FAQ, in groups; numbered 01, 02… straight through. */
+export const faqGroups: { title: string; items: { q: string; a: string }[] }[] = [
   {
-    q: "Do I need a consultation before booking a treatment?",
-    a: "Yes — every new patient starts with a consultation so we can understand your skin and goals before recommending anything.",
+    title: "Getting Started",
+    items: [
+      {
+        q: "Do I need a consultation before starting a treatment?",
+        a: "Yes. A consultation helps us assess your skin and recommend the safest and most suitable treatment for you.",
+      },
+      {
+        q: "How do I know which treatment is right for my skin?",
+        a: "The right treatment depends on your skin type, concerns, medical history, and goals. Our doctor will assess your skin and recommend a personalised treatment plan.",
+      },
+      {
+        q: "Can I combine different treatments?",
+        a: "Yes. Depending on your skin concerns and goals, treatments may be safely combined as part of a personalised plan.",
+      },
+      {
+        q: "Do you provide personalised skincare plans?",
+        a: "Yes. We create personalised skincare plans based on your skin type, concerns, and individual needs.",
+      },
+    ],
   },
   {
-    q: "Are results permanent?",
-    a: "It depends on the treatment. We'll walk through expected longevity and any maintenance during your consultation.",
+    title: "Our Care",
+    items: [
+      {
+        q: "Do you treat medical skin conditions as well as aesthetic concerns?",
+        a: "Yes. We provide care for a wide range of medical dermatological and aesthetic concerns.",
+      },
+      {
+        q: "Do you treat men as well as women?",
+        a: "Yes. DermaSoul welcomes both men and women for dermatological and aesthetic care.",
+      },
+      {
+        q: "Are treatments performed by qualified medical professionals?",
+        a: "Yes. All treatments are performed under the supervision of qualified medical professionals, following appropriate safety and clinical standards.",
+      },
+    ],
   },
   {
-    q: "Can I purchase products without booking a treatment?",
-    a: "Yes, the Skincare Shop is open to anyone — you don't need to be an active patient. Ask at the clinic.",
+    title: "Psychodermatology and Emotional Well-being",
+    items: [
+      {
+        q: "What is psychodermatology?",
+        a: "Psychodermatology focuses on the connection between skin health, emotional well-being, and mental health.",
+      },
+      {
+        q: "How can stress and emotional well-being affect the skin?",
+        a: "Stress can influence skin health and may worsen conditions such as acne, eczema, psoriasis, and hair loss.",
+      },
+      {
+        q: "Can DermaSoul help if my skin condition is affecting my confidence or emotional well-being?",
+        a: "Yes. We take a holistic approach, addressing both your skin concerns and how they may affect your confidence and well-being.",
+      },
+      {
+        q: "Do you provide supportive counselling or psychological guidance for skin-related concerns?",
+        a: "Yes. Supportive guidance is available for emotional and psychological concerns related to skin conditions and appearance.",
+      },
+    ],
   },
   {
-    q: "What's your cancellation policy?",
-    a: "We ask for at least 24 hours' notice so we can offer the slot to another patient.",
+    title: "Contact",
+    items: [
+      {
+        q: "How can I contact DermaSoul for more information?",
+        a: "You can contact us by phone, WhatsApp, or through our social media pages.",
+      },
+    ],
   },
 ];
 
