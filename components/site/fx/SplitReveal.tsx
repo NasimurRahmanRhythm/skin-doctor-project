@@ -8,7 +8,7 @@ type Tag = "h1" | "h2" | "h3" | "p" | "div" | "span";
 
 /**
  * Lines rise out of masks. `on="scroll"` plays when the block enters view;
- * `on="intro"` waits for the preloader curtain. autoSplit re-splits after the
+ * `on="intro"` plays as the page opens. autoSplit re-splits after the
  * web font swaps in or the viewport resizes, so line breaks stay correct.
  */
 export default function SplitReveal({

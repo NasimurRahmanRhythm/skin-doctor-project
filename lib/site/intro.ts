@@ -1,7 +1,7 @@
 /**
- * The preloader curtain gates the hero's entrance. Anything that should play
- * "as the page opens" subscribes here instead of on mount, so it runs as the
- * curtain lifts rather than behind it.
+ * The page's "intro is over" signal, sent by <IntroDone /> as the page mounts.
+ * Anything that should play "as the page opens" (the header, the hero's
+ * entrance) subscribes here.
  */
 let done = false;
 const listeners = new Set<() => void>();

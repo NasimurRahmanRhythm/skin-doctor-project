@@ -4,8 +4,8 @@ import { useEffect } from "react";
 import { markIntroDone } from "@/lib/site/intro";
 
 /**
- * The inner pages have no preloader curtain, so nothing would ever say the
- * intro is over and the header would wait forever. This says it at once.
+ * There is no loading screen, so this says the intro is over as soon as the
+ * page mounts; the header and the hero's entrance wait for it.
  */
 export default function IntroDone() {
   useEffect(() => markIntroDone(), []);

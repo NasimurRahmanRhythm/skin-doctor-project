@@ -51,7 +51,6 @@ html {
   scrollbar-width: thin;
   scrollbar-color: var(--gold) var(--ivory);
 }
-html.is-loading,
 html.menu-open {
   overflow: hidden;
 }
@@ -531,67 +530,6 @@ html.has-cursor .site-modal button {
   background: var(--gold);
   color: var(--paper);
   box-shadow: 0 10px 30px rgb(143 98 48 / 0.35);
-}
-
-/* ---------- preloader ---------- */
-
-.preloader {
-  position: fixed;
-  inset: 0;
-  z-index: 150;
-  background: var(--espresso);
-  color: var(--cream);
-  display: grid;
-  place-items: center;
-}
-.preloader-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 28px;
-}
-.preloader-logo {
-  position: relative;
-  width: clamp(200px, 26vw, 340px);
-}
-.preloader-logo img {
-  width: 100%;
-  height: auto;
-}
-/* A light sweep across the gold, masked to the logo so it never lights the background. */
-.preloader-shine {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 35%, rgb(255 244 222 / 0.75) 50%, transparent 65%) -150% 0 / 250% 100% no-repeat;
-  mask: url("/brand/logo-v2.png") center / contain no-repeat;
-  -webkit-mask: url("/brand/logo-v2.png") center / contain no-repeat;
-  mix-blend-mode: overlay;
-  animation: shine 1.8s 1.2s var(--ease-io) forwards;
-}
-@keyframes shine {
-  to { background-position: 150% 0; }
-}
-.preloader-foot {
-  position: absolute;
-  left: var(--gutter);
-  right: var(--gutter);
-  bottom: 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  font-size: 0.72rem;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--cream-soft);
-}
-.preloader-count {
-  font-family: var(--serif);
-  font-size: clamp(3rem, 8vw, 6rem);
-  font-weight: 300;
-  line-height: 0.8;
-  letter-spacing: -0.04em;
-  color: var(--cream);
-  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- header ---------- */

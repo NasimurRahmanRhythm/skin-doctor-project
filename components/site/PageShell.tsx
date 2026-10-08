@@ -10,7 +10,7 @@ import { socialDefaults } from "@/lib/site/content";
 /**
  * The frame around every inner page (/treatments, /packages, /products,
  * /inquiry): the same header and footer as the landing page, without its
- * preloader and hero.
+ * hero.
  */
 export default async function PageShell({ children }: { children: ReactNode }) {
   // One row each is enough to know whether Our Team and Packages have anything.

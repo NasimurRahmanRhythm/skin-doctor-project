@@ -1,5 +1,5 @@
 import SmoothScroll from "@/components/site/fx/SmoothScroll";
-import Preloader from "@/components/site/fx/Preloader";
+import IntroDone from "@/components/site/fx/IntroDone";
 import Cursor from "@/components/site/fx/Cursor";
 import RoamingBadge from "@/components/site/fx/RoamingBadge";
 import Header from "@/components/site/sections/Header";
@@ -72,9 +72,9 @@ export default async function Home() {
 
   return (
     <>
-      {/* SmoothScroll must mount before Preloader so the preloader can pause it. */}
       <SmoothScroll />
-      <Preloader />
+      {/* No loading screen: the hero and header play in as soon as the page opens. */}
+      <IntroDone />
       <Cursor />
       <Header
         hide={[

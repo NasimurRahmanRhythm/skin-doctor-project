@@ -10,7 +10,7 @@ import { Arrow } from "@/components/site/Icons";
 
 /**
  * Athena-style full-bleed video hero. The film opens out of a rounded window
- * as the preloader curtain lifts, then drifts and dims as you scroll away.
+ * as the page opens, then drifts and dims as you scroll away.
  */
 export default function Hero() {
   const root = useRef<HTMLElement>(null);
