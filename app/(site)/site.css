@@ -968,10 +968,11 @@ html.has-cursor .site-modal button {
 .press-label {
   flex-shrink: 0;
   padding: 0 32px 0 var(--gutter);
-  font-size: 0.7rem;
-  letter-spacing: 0.28em;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--ink);
   border-right: 1px solid var(--line);
   align-self: stretch;
   display: flex;

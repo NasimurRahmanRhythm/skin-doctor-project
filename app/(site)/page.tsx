@@ -10,10 +10,9 @@ import Visit from "@/components/site/sections/Visit";
 import Treatments from "@/components/site/sections/Treatments";
 import About from "@/components/site/sections/About";
 import FeatureVideo from "@/components/site/sections/FeatureVideo";
-// Hidden for now — see the note above <Team /> below.
-// import Packages from "@/components/site/sections/Packages";
+import Packages from "@/components/site/sections/Packages";
 import Results from "@/components/site/sections/Results";
-// import Team from "@/components/site/sections/Team";
+import Team from "@/components/site/sections/Team";
 import Certifications from "@/components/site/sections/Certifications";
 import Reviews from "@/components/site/sections/Reviews";
 import Shop from "@/components/site/sections/Shop";
@@ -23,10 +22,10 @@ import Cta from "@/components/site/sections/Cta";
 import Footer, { FabInstagram } from "@/components/site/sections/Footer";
 import { socialDefaults } from "@/lib/site/content";
 import {
-  // getDoctors,
+  getDoctors,
   getInstagram,
   getLinks,
-  // getPackages,
+  getPackages,
   getProducts,
   getResults,
   getReviews,
@@ -49,9 +48,9 @@ export const revalidate = 3600;
 export default async function Home() {
   const [
     treatments,
-    // packages,
+    packages,
     results,
-    // doctors,
+    doctors,
     press,
     certifications,
     reviews,
@@ -60,9 +59,9 @@ export default async function Home() {
     social,
   ] = await Promise.all([
     getTreatments(6),
-    // getPackages(3),
+    getPackages(3),
     getResults(3),
-    // getDoctors(4),
+    getDoctors(4),
     getLinks("press"),
     getLinks("certification"),
     getReviews(),
@@ -77,24 +76,24 @@ export default async function Home() {
       <SmoothScroll />
       <Preloader />
       <Cursor />
-      <Header />
+      <Header
+        hide={[
+          ...(doctors.length ? [] : (["team"] as const)),
+          ...(packages.length ? [] : (["packages"] as const)),
+        ]}
+      />
       <main>
         <Hero />
         <Statement />
-        {/*
-         * Our Team and Packages are hidden for now. To bring them back,
-         * uncomment them here together with their imports and their entries
-         * in the Promise.all above, and point their nav links in
-         * lib/site/content.ts back at "/#team" and "/#packages".
-         */}
-        {/* <Team doctors={doctors} /> */}
+        {/* Our Team and Packages hide themselves, and their nav links, while empty. */}
+        <Team doctors={doctors} />
         <Visit />
         <Certifications items={certifications} />
         <Treatments items={treatments} />
         <Press items={press} />
         <About />
         <FeatureVideo />
-        {/* <Packages items={packages} /> */}
+        <Packages items={packages} />
         <Results items={results} />
         <Reviews data={reviews} />
         <Shop items={products} />

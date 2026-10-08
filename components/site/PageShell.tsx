@@ -4,7 +4,7 @@ import Cursor from "@/components/site/fx/Cursor";
 import IntroDone from "@/components/site/fx/IntroDone";
 import Header from "@/components/site/sections/Header";
 import Footer, { FabInstagram } from "@/components/site/sections/Footer";
-import { getSocialLinks } from "@/lib/site/data";
+import { getDoctors, getPackages, getSocialLinks } from "@/lib/site/data";
 import { socialDefaults } from "@/lib/site/content";
 
 /**
@@ -13,13 +13,20 @@ import { socialDefaults } from "@/lib/site/content";
  * preloader and hero.
  */
 export default async function PageShell({ children }: { children: ReactNode }) {
-  const social = await getSocialLinks();
+  // One row each is enough to know whether Our Team and Packages have anything.
+  const [social, doctors, packages] = await Promise.all([getSocialLinks(), getDoctors(1), getPackages(1)]);
   return (
     <>
       <SmoothScroll />
       <IntroDone />
       <Cursor />
-      <Header alwaysSolid />
+      <Header
+        alwaysSolid
+        hide={[
+          ...(doctors.length ? [] : (["team"] as const)),
+          ...(packages.length ? [] : (["packages"] as const)),
+        ]}
+      />
       <main>{children}</main>
       <Footer social={social} />
       <FabInstagram profileUrl={social.find((s) => s.network === "instagram")?.url ?? socialDefaults.instagram} />

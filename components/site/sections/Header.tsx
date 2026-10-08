@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react";
-import { brand, hoursLine, nav } from "@/lib/site/content";
+import { brand, hoursLine, nav as allLinks, type OptionalSection } from "@/lib/site/content";
 import { getLenis } from "@/lib/site/scroll";
 import { onIntroDone } from "@/lib/site/intro";
 
@@ -15,7 +15,15 @@ const EASE = [0.76, 0, 0.24, 1] as const;
  * (/treatments, /packages…) there is no dark hero behind it, so `alwaysSolid`
  * starts it on the cream bar it otherwise only takes on after scrolling.
  */
-export default function Header({ alwaysSolid = false }: { alwaysSolid?: boolean }) {
+export default function Header({
+  alwaysSolid = false,
+  hide = [],
+}: {
+  alwaysSolid?: boolean;
+  /** Sections with nothing in them; their links are left out. */
+  hide?: OptionalSection[];
+}) {
+  const nav = allLinks.filter((l) => !l.optional || !hide.includes(l.optional));
   const { scrollY, scrollYProgress } = useScroll();
   const [solid, setSolid] = useState(alwaysSolid);
   const [hidden, setHidden] = useState(false);

@@ -70,13 +70,14 @@ export const hoursLine = brand.hours.join(" · ");
  * Links work from every page, not only the landing page: "/#packages" from
  * /treatments goes back home and scrolls there.
  */
-export const nav = [
+/** A nav link that only shows while its section has something in it. */
+export type OptionalSection = "team" | "packages";
+
+export const nav: { label: string; href: string; optional?: OptionalSection }[] = [
   { label: "Treatments", href: "/#treatments" },
-  // Their landing-page sections are hidden for now (app/(site)/page.tsx), so
-  // these open the full pages. Back to "/#team" and "/#packages" when the
-  // sections return.
-  { label: "Our Team", href: "/team" },
-  { label: "Packages", href: "/packages" },
+  // Shown only while there is something in them; see Header's `hide`.
+  { label: "Our Team", href: "/#team", optional: "team" },
+  { label: "Packages", href: "/#packages", optional: "packages" },
   { label: "Results", href: "/#results" },
   { label: "Reviews", href: "/#reviews" },
   { label: "About", href: "/#about" },
