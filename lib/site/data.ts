@@ -297,12 +297,13 @@ export async function getInstagram(): Promise<SiteInstagram | null> {
   };
 }
 
-export type SocialNetwork = "facebook" | "instagram" | "x" | "linkedin" | "youtube";
+export type SocialNetwork = "facebook" | "instagram" | "tiktok" | "x" | "linkedin" | "youtube";
 export type SiteSocialLink = { network: SocialNetwork; label: string; url: string };
 
 const NETWORK_LABEL: Record<SocialNetwork, string> = {
   facebook: "Facebook",
   instagram: "Instagram",
+  tiktok: "TikTok",
   x: "X",
   linkedin: "LinkedIn",
   youtube: "YouTube",

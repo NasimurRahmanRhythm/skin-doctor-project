@@ -4,8 +4,8 @@ import { TeamCatalog } from "@/components/site/sections/Team";
 import { getDoctors } from "@/lib/site/data";
 
 export const metadata: Metadata = {
-  title: "Our Team — DermaSoul Aesthetics",
-  description: "The team of DermaSoul Aesthetics, Banani, Dhaka.",
+  title: "Our Team — DermaSoul Medical Aesthetics",
+  description: "The team of DermaSoul Medical Aesthetics, Banani, Dhaka.",
 };
 
 /** Rebuilt whenever the owner changes a team member; hourly at the latest. */

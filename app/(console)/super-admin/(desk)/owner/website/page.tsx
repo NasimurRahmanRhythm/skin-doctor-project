@@ -69,6 +69,7 @@ export default async function WebsitePage({
         x: other.x ?? "",
         linkedin: other.linkedin ?? "",
         youtube: other.youtube || socialDefaults.youtube,
+        tiktok: other.tiktok || socialDefaults.tiktok,
       };
     }
 

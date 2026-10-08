@@ -281,6 +281,7 @@ const socialSchema = z.object({
   x: profileLink(/^https:\/\/(www\.)?(x|twitter)\.com\/\S+/i, "Use the X profile's x.com link."),
   linkedin: profileLink(/^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/\S+/i, "Use the LinkedIn page's linkedin.com link."),
   youtube: profileLink(/^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be)\/\S+/i, "Use the YouTube channel's youtube.com link."),
+  tiktok: profileLink(/^https:\/\/((www|m|vm)\.)?tiktok\.com\/\S+/i, "Use the TikTok profile's tiktok.com link."),
 });
 
 /**
@@ -301,6 +302,7 @@ export async function saveSocialLinks(_prev: WebsiteState, formData: FormData): 
     x: formData.get("x") ?? "",
     linkedin: formData.get("linkedin") ?? "",
     youtube: formData.get("youtube") ?? "",
+    tiktok: formData.get("tiktok") ?? "",
   });
   if (!others.success) return { error: others.error.issues[0]?.message };
 

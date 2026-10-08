@@ -221,7 +221,7 @@ export default function PaymentSlip() {
             {/* eslint-disable-next-line @next/next/no-img-element -- must be in
                 the document before window.print() fires, not lazy-loaded */}
             <img
-              src="/brand/mark.png"
+              src="/brand/mark-v2.png"
               alt=""
               width={64}
               height={64}

@@ -18,7 +18,7 @@ function Picture({ p, sizes }: { p: SiteProduct; sizes: string }) {
   }
   return (
     <span className="product-placeholder">
-      <Image src="/brand/mark-256.png" alt="" width={96} height={96} sizes={sizes} />
+      <Image src="/brand/mark-256-v2.png" alt="" width={96} height={96} sizes={sizes} />
     </span>
   );
 }

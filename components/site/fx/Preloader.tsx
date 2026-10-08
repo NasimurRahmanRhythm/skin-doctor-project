@@ -60,7 +60,7 @@ export default function Preloader() {
               animate={{ clipPath: "inset(0% 0% 0% 0%)", y: 0, scale: 1 }}
               transition={{ duration: 1.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             >
-              <Image src="/brand/logo.png" alt="" width={933} height={866} preload />
+              <Image src="/brand/logo-v2.png" alt="" width={1200} height={1073} preload />
               <span className="preloader-shine" />
             </motion.div>
           </motion.div>

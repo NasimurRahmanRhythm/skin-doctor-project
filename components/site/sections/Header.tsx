@@ -47,13 +47,9 @@ export default function Header({ alwaysSolid = false }: { alwaysSolid?: boolean 
         transition={{ duration: 0.8, ease: EASE }}
       >
         <Link href="/" className="wordmark" aria-label={`${brand.name} — home`}>
-          <Image src="/brand/mark-256.png" alt="" width={40} height={40} preload />
-          <span className="wordmark-text">
-            <span>
-              Derma<em>Soul</em>
-            </span>
-            <small>{brand.tagline}</small>
-          </span>
+          <Image src="/brand/mark-256-v2.png" alt="" width={40} height={40} className="wordmark-mark" preload />
+          {/* The logo's own lettering, so the name always matches the logo. */}
+          <Image src="/brand/wordmark.png" alt="" width={900} height={246} className="wordmark-word" preload />
         </Link>
 
         <div className="hdr-actions">

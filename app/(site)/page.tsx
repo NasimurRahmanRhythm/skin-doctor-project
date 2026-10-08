@@ -5,6 +5,7 @@ import RoamingBadge from "@/components/site/fx/RoamingBadge";
 import Header from "@/components/site/sections/Header";
 import Hero from "@/components/site/sections/Hero";
 import Statement from "@/components/site/sections/Statement";
+import Press from "@/components/site/sections/Press";
 import Visit from "@/components/site/sections/Visit";
 import Treatments from "@/components/site/sections/Treatments";
 import About from "@/components/site/sections/About";
@@ -40,11 +41,10 @@ import {
 export const revalidate = 3600;
 
 /*
- * Section order follows athenaderma.com: film hero → brand stamp → team →
- * location → concerns → philosophy → popular treatments → journal. The
- * sections that Athena has no slot for (packages, results, shop) sit where
- * their neighbours make sense of them. Anything the owner has not filled in
- * yet hides itself.
+ * Section order: film hero → brand stamp → (team) → location →
+ * certifications → treatments → "As seen in" → philosophy → video →
+ * results → reviews → shop → Instagram → FAQ → call to book. Anything the
+ * owner has not filled in yet hides itself.
  */
 export default async function Home() {
   const [
@@ -80,7 +80,7 @@ export default async function Home() {
       <Header />
       <main>
         <Hero />
-        <Statement press={press} />
+        <Statement />
         {/*
          * Our Team and Packages are hidden for now. To bring them back,
          * uncomment them here together with their imports and their entries
@@ -89,12 +89,13 @@ export default async function Home() {
          */}
         {/* <Team doctors={doctors} /> */}
         <Visit />
+        <Certifications items={certifications} />
         <Treatments items={treatments} />
+        <Press items={press} />
         <About />
         <FeatureVideo />
         {/* <Packages items={packages} /> */}
         <Results items={results} />
-        <Certifications items={certifications} />
         <Reviews data={reviews} />
         <Shop items={products} />
         <Social data={instagram} />

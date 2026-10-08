@@ -52,7 +52,11 @@ export default function Visit() {
             <div>
               <h4>Contact</h4>
               <a href={`mailto:${brand.email}`}>{brand.email}</a>
-              <a href={`tel:${brand.phone.replace(/\s/g, "")}`}>{brand.phone}</a>
+              {brand.phones.map((phone) => (
+                <a key={phone} href={`tel:${phone.replace(/[^\d+]/g, "")}`}>
+                  {phone}
+                </a>
+              ))}
             </div>
           </Reveal>
 

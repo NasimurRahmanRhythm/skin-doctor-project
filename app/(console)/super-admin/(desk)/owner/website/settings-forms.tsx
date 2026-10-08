@@ -32,6 +32,7 @@ export type SocialLinks = {
   x: string;
   linkedin: string;
   youtube: string;
+  tiktok: string;
 };
 
 const NETWORKS: { name: keyof SocialLinks; label: string; placeholder: string }[] = [
@@ -40,6 +41,7 @@ const NETWORKS: { name: keyof SocialLinks; label: string; placeholder: string }[
   { name: "x", label: "X (Twitter)", placeholder: "https://x.com/dermasoul" },
   { name: "linkedin", label: "LinkedIn", placeholder: "https://www.linkedin.com/company/dermasoul" },
   { name: "youtube", label: "YouTube channel", placeholder: "https://www.youtube.com/@dermasoul" },
+  { name: "tiktok", label: "TikTok", placeholder: "https://www.tiktok.com/@dermasoul" },
 ];
 
 /**

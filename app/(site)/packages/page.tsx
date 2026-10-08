@@ -4,8 +4,8 @@ import { PackageCatalog } from "@/components/site/sections/Packages";
 import { getPackages } from "@/lib/site/data";
 
 export const metadata: Metadata = {
-  title: "Packages — DermaSoul Aesthetics",
-  description: "Multi-session treatment packages at DermaSoul Aesthetics, Banani, Dhaka.",
+  title: "Packages — DermaSoul Medical Aesthetics",
+  description: "Multi-session treatment packages at DermaSoul Medical Aesthetics, Banani, Dhaka.",
 };
 
 /** Rebuilt whenever the owner saves a package; hourly at the latest. */

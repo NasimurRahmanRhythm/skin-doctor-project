@@ -140,11 +140,11 @@ export default function RoamingBadge() {
         ref={root}
         href="/inquiry"
         className="roam roam-core"
-        aria-label="DermaSoul Aesthetics — book a consultation"
+        aria-label="DermaSoul Medical Aesthetics — book a consultation"
         data-cursor="Book"
       >
         <span className="roam-disc">
-          <Image src="/brand/mark-256.png" alt="" width={256} height={256} />
+          <Image src="/brand/mark-256-v2.png" alt="" width={256} height={256} />
         </span>
       </a>
     </>

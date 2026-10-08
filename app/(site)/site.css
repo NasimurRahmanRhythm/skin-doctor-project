@@ -28,8 +28,9 @@
   --cream-soft: rgb(241 230 210 / 0.66);
   --line-dark: rgb(241 230 210 / 0.16);
 
-  --serif: var(--font-serif), "Times New Roman", serif;
-  --sans: var(--font-sans), system-ui, sans-serif;
+  /* Roboto for everything; the "serif" name is kept for the display voice. */
+  --serif: var(--font-roboto), system-ui, sans-serif;
+  --sans: var(--font-roboto), system-ui, sans-serif;
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-io: cubic-bezier(0.76, 0, 0.24, 1);
@@ -53,6 +54,13 @@ html {
 html.is-loading,
 html.menu-open {
   overflow: hidden;
+}
+
+/* No italics anywhere on the website, whatever a rule or tag asks for. */
+*,
+*::before,
+*::after {
+  font-style: normal !important;
 }
 
 body {
@@ -555,8 +563,8 @@ html.has-cursor .site-modal button {
   position: absolute;
   inset: 0;
   background: linear-gradient(105deg, transparent 35%, rgb(255 244 222 / 0.75) 50%, transparent 65%) -150% 0 / 250% 100% no-repeat;
-  mask: url("/brand/logo.png") center / contain no-repeat;
-  -webkit-mask: url("/brand/logo.png") center / contain no-repeat;
+  mask: url("/brand/logo-v2.png") center / contain no-repeat;
+  -webkit-mask: url("/brand/logo-v2.png") center / contain no-repeat;
   mix-blend-mode: overlay;
   animation: shine 1.8s 1.2s var(--ease-io) forwards;
 }
@@ -635,31 +643,16 @@ html.has-cursor .site-modal button {
   letter-spacing: -0.02em;
   white-space: nowrap;
 }
-.wordmark img {
-  width: 40px;
-  height: 40px;
+.wordmark .wordmark-mark {
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
 }
-.wordmark-text {
-  display: flex;
-  flex-direction: column;
-}
-/* The whole word is gold, "Derma" as well as "Soul"; only "Soul" is italic. */
-.wordmark-text > span,
-.wordmark em {
-  color: var(--gold-soft);
-}
-.wordmark small {
-  font-family: var(--sans);
-  font-size: 0.5rem;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  margin-top: 5px;
-  opacity: 0.75;
-}
-.is-solid .wordmark-text > span,
-.is-solid .wordmark em {
-  color: var(--gold);
+/* "DermaSoul / MEDICAL AESTHETICS" cut from the logo itself. */
+.wordmark .wordmark-word {
+  height: 40px;
+  width: auto;
+  flex-shrink: 0;
 }
 .hdr-actions {
   display: flex;
@@ -923,7 +916,7 @@ html.has-cursor .site-modal button {
 }
 .stmt-grid {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 300px 1fr;
   gap: clamp(32px, 6vw, 100px);
   position: relative;
 }
@@ -950,8 +943,15 @@ html.has-cursor .site-modal button {
 }
 /* The byline beside the statement, larger than the usual kicker. */
 .stmt-kicker {
-  font-size: 1.05rem;
-  line-height: 1.6;
+  font-size: 1.25rem;
+  line-height: 1.55;
+  letter-spacing: 0.2em;
+  align-items: flex-start;
+}
+/* Over several lines, the dash stays beside the first. */
+.stmt-kicker::before {
+  flex-shrink: 0;
+  margin-top: 0.78em;
 }
 .stmt-roam {
   right: 6%;
@@ -1431,6 +1431,8 @@ html.has-cursor .site-modal button {
 }
 .about-copy .display {
   margin-bottom: 40px;
+  /* The full name is long; this keeps it to two or three lines. */
+  font-size: clamp(2.4rem, 4.6vw, 4.4rem);
 }
 .about-copy p {
   color: var(--ink-soft);
@@ -2827,6 +2829,13 @@ html.modal-open {
   }
 }
 @media (max-width: 640px) {
+  .wordmark .wordmark-mark {
+    width: 36px;
+    height: 36px;
+  }
+  .wordmark .wordmark-word {
+    height: 32px;
+  }
   .card-grid,
   .product-detail {
     grid-template-columns: 1fr;

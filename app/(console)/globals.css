@@ -113,9 +113,9 @@
   --color-danger: var(--danger);
   --color-hero-fg: var(--hero-fg);
 
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono-code), ui-monospace, SFMono-Regular, monospace;
-  --font-display: var(--font-display-serif), Georgia, serif;
+  --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-roboto-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-display: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
 
   --radius-card: 12px;
   --radius-control: 9px;
@@ -129,14 +129,20 @@ body {
   background: var(--canvas);
 }
 
+/* No italics anywhere in the console, whatever a class or tag asks for. */
+*,
+*::before,
+*::after {
+  font-style: normal !important;
+}
+
 body {
   color: var(--fg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Manrope is drawn wide. Pulling the tracking in at display sizes is what
-   stops headings reading as a logo. */
+/* Pulling the tracking in a little at display sizes keeps headings tight. */
 h1,
 h2,
 h3 {

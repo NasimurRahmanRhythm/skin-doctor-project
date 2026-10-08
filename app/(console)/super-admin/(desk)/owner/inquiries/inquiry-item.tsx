@@ -26,7 +26,7 @@ export default function InquiryItem({ inquiry: q }: { inquiry: Inquiry }) {
     if (next && !q.is_read) start(() => markInquiryRead(q.id));
   }
 
-  const reply = `mailto:${q.email}?subject=${encodeURIComponent("Re: your inquiry to DermaSoul")}`;
+  const reply = `mailto:${q.email}?subject=${encodeURIComponent("Re: your inquiry to DermaSoul Medical Aesthetics")}`;
 
   return (
     <li className={`py-1 ${q.is_read ? "" : "font-semibold"}`}>

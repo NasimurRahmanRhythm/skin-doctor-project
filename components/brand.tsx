@@ -20,7 +20,7 @@ export default function Brand({
   return (
     <span className="flex items-center gap-2.5">
       <Image
-        src="/brand/mark.png"
+        src="/brand/mark-v2.png"
         alt=""
         width={glyph}
         height={glyph}
@@ -30,7 +30,7 @@ export default function Brand({
 
       <span className={`${type} font-semibold tracking-tight`}>
         DermaSoul
-        <span className="text-muted"> Aesthetics</span>
+        <span className="text-muted"> Medical Aesthetics</span>
       </span>
 
       {subtitle && (
@@ -46,10 +46,10 @@ export default function Brand({
 export function BrandLockup({ width = 220 }: { width?: number }) {
   return (
     <Image
-      src="/brand/logo.png"
+      src="/brand/logo-v2.png"
       alt="DermaSoul Medical Aesthetics by Dr. Nusrat Liza"
       width={width}
-      height={Math.round((width * 866) / 933)}
+      height={Math.round((width * 1073) / 1200)}
       loading="eager"
     />
   );

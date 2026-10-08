@@ -4,8 +4,8 @@ import { ProductCatalog } from "@/components/site/sections/Shop";
 import { getProducts } from "@/lib/site/data";
 
 export const metadata: Metadata = {
-  title: "Shop — DermaSoul Aesthetics",
-  description: "Practitioner-selected skincare from DermaSoul Aesthetics, Banani, Dhaka.",
+  title: "Shop — DermaSoul Medical Aesthetics",
+  description: "Practitioner-selected skincare from DermaSoul Medical Aesthetics, Banani, Dhaka.",
 };
 
 /** Rebuilt whenever the owner saves a product; hourly at the latest. */

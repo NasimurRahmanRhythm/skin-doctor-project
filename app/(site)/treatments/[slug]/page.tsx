@@ -15,11 +15,11 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<"/treatments/[slug]">): Promise<Metadata> {
   const found = await getTreatment((await params).slug);
-  if (!found) return { title: "Treatment — DermaSoul Aesthetics" };
+  if (!found) return { title: "Treatment — DermaSoul Medical Aesthetics" };
   const { treatment: t } = found;
   return {
-    title: `${t.title} — DermaSoul Aesthetics`,
-    description: excerpt(t.description ?? t.subtitle ?? `${t.title} at DermaSoul Aesthetics, Banani, Dhaka.`),
+    title: `${t.title} — DermaSoul Medical Aesthetics`,
+    description: excerpt(t.description ?? t.subtitle ?? `${t.title} at DermaSoul Medical Aesthetics, Banani, Dhaka.`),
     openGraph: t.image ? { images: [t.image] } : undefined,
   };
 }

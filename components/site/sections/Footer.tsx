@@ -4,11 +4,12 @@ import Image from "next/image";
 import { motion } from "motion/react";
 import { brand, footer, instagramChatUrl } from "@/lib/site/content";
 import type { SiteSocialLink, SocialNetwork } from "@/lib/site/data";
-import { Facebook, Instagram, LinkedIn, XLogo, YouTube } from "@/components/site/Icons";
+import { Facebook, Instagram, LinkedIn, TikTok, XLogo, YouTube } from "@/components/site/Icons";
 
 const NETWORK_ICON: Record<SocialNetwork, typeof Instagram> = {
   facebook: Facebook,
   instagram: Instagram,
+  tiktok: TikTok,
   x: XLogo,
   linkedin: LinkedIn,
   youtube: YouTube,
@@ -25,10 +26,10 @@ export default function Footer({ social = [] }: { social?: SiteSocialLink[] }) {
         <div className="foot-grid">
           <div className="foot-brand">
             <Image
-              src="/brand/logo.png"
+              src="/brand/logo-v2.png"
               alt={`${brand.name} ${brand.byline}`}
-              width={933}
-              height={866}
+              width={1200}
+              height={1073}
               className="foot-logo"
             />
             <p>{footer.blurb}</p>
@@ -69,9 +70,11 @@ export default function Footer({ social = [] }: { social?: SiteSocialLink[] }) {
             <a href={`mailto:${brand.email}`} className="roll">
               <span data-text={brand.email}>{brand.email}</span>
             </a>
-            <a href={`tel:${brand.phone.replace(/\s/g, "")}`} className="roll">
-              <span data-text={brand.phone}>{brand.phone}</span>
-            </a>
+            {brand.phones.map((phone) => (
+              <a key={phone} href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="roll">
+                <span data-text={phone}>{phone}</span>
+              </a>
+            ))}
           </div>
         </div>
       </div>

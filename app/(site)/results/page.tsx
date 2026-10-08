@@ -4,8 +4,8 @@ import { ResultCatalog } from "@/components/site/sections/Results";
 import { getResults } from "@/lib/site/data";
 
 export const metadata: Metadata = {
-  title: "Results — DermaSoul Aesthetics",
-  description: "Before and after results from DermaSoul Aesthetics, Banani, Dhaka.",
+  title: "Results — DermaSoul Medical Aesthetics",
+  description: "Before and after results from DermaSoul Medical Aesthetics, Banani, Dhaka.",
 };
 
 /** Rebuilt whenever the owner saves a result; hourly at the latest. */

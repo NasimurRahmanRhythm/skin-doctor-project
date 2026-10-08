@@ -1,4 +1,4 @@
-import { CLINIC_ADDRESS, CLINIC_PHONE } from "@/lib/clinic";
+import { CLINIC_ADDRESS, CLINIC_PHONE, CLINIC_PHONES } from "@/lib/clinic";
 
 /**
  * The landing page's fixed copy. The copy comes from lumen-leaf-website.html,
@@ -11,12 +11,14 @@ import { CLINIC_ADDRESS, CLINIC_PHONE } from "@/lib/clinic";
  */
 
 export const brand = {
-  name: "DermaSoul Aesthetics",
+  name: "DermaSoul Medical Aesthetics",
   short: "DermaSoul",
   tagline: "Medical Aesthetics",
   byline: "by Dr. Nusrat Liza",
   email: "dermasoulmedicalae@gmail.com",
   phone: CLINIC_PHONE,
+  /** All the clinic's numbers, main one first. */
+  phones: CLINIC_PHONES,
   /** One line, as printed on the prescription. */
   addressLine: CLINIC_ADDRESS,
   /** The full address over a few lines, for the footer and the location band. */
@@ -42,6 +44,7 @@ export const brand = {
 export const socialDefaults = {
   instagram: "https://www.instagram.com/dermasoulmedical/",
   youtube: "https://www.youtube.com/@DermaSoulMedical",
+  tiktok: "https://www.tiktok.com/@dermasoulmedical",
 };
 
 /**
@@ -108,10 +111,10 @@ export const resultsIntro = {
 
 export const about = {
   kicker: "Our story",
-  title: "About DermaSoul",
+  title: "About DermaSoul Medical Aesthetics",
   paragraphs: [
-    "We created DermaSoul with a simple belief: beautiful skin begins with healthy skin, and great care begins with understanding you.",
-    "At DermaSoul, we bring together clinical dermatology and aesthetic medicine in a calm, personalized environment where every skin concern is approached with care, knowledge, and attention to detail.",
+    "We created DermaSoul Medical Aesthetics with a simple belief: beautiful skin begins with healthy skin, and great care begins with understanding you.",
+    "At DermaSoul Medical Aesthetics, we bring together clinical dermatology and aesthetic medicine in a calm, personalized environment where every skin concern is approached with care, knowledge, and attention to detail.",
     "From everyday skin conditions and personalized skincare plans to advanced aesthetic treatments, our focus is never simply on following trends. Every treatment is chosen according to your skin, your needs, and your individual goals.",
     "We believe aesthetic medicine should enhance—not change—who you are. Our approach is centred on natural-looking results, evidence-based care, safety, and long-term skin health.",
   ],
@@ -119,7 +122,7 @@ export const about = {
     "Because your skin is more than what you see in the mirror.",
     "It is part of how you feel about yourself.",
   ],
-  signature: "— Dr. Nusrat Liza & the DermaSoul Team",
+  signature: "— Dr. Nusrat Liza & the DermaSoul Medical Aesthetics Team",
   brandLine: {
     name: "DermaSoul Medical Aesthetics",
     tagline: "We elevate your skin & confidence.",
@@ -176,7 +179,7 @@ export const faqGroups: { title: string; items: { q: string; a: string }[] }[] =
       },
       {
         q: "Do you treat men as well as women?",
-        a: "Yes. DermaSoul welcomes both men and women for dermatological and aesthetic care.",
+        a: "Yes. DermaSoul Medical Aesthetics welcomes both men and women for dermatological and aesthetic care.",
       },
       {
         q: "Are treatments performed by qualified medical professionals?",
@@ -196,7 +199,7 @@ export const faqGroups: { title: string; items: { q: string; a: string }[] }[] =
         a: "Stress can influence skin health and may worsen conditions such as acne, eczema, psoriasis, and hair loss.",
       },
       {
-        q: "Can DermaSoul help if my skin condition is affecting my confidence or emotional well-being?",
+        q: "Can DermaSoul Medical Aesthetics help if my skin condition is affecting my confidence or emotional well-being?",
         a: "Yes. We take a holistic approach, addressing both your skin concerns and how they may affect your confidence and well-being.",
       },
       {
@@ -209,7 +212,7 @@ export const faqGroups: { title: string; items: { q: string; a: string }[] }[] =
     title: "Contact",
     items: [
       {
-        q: "How can I contact DermaSoul for more information?",
+        q: "How can I contact DermaSoul Medical Aesthetics for more information?",
         a: "You can contact us by phone, WhatsApp, or through our social media pages.",
       },
     ],

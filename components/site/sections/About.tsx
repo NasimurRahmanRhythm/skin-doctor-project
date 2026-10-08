@@ -51,7 +51,7 @@ export default function About() {
         <div className="about-copy">
           <span className="kicker">{about.kicker}</span>
           <SplitReveal as="h2" className="display">
-            About <em>DermaSoul</em>
+            About <em>DermaSoul Medical Aesthetics</em>
           </SplitReveal>
           {about.paragraphs.map((p, i) => (
             <Reveal key={i} delay={0.1 + i * 0.1}>

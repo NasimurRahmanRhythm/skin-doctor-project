@@ -4,8 +4,8 @@ import { brand, inquiry } from "@/lib/site/content";
 import InquiryForm from "./inquiry-form";
 
 export const metadata: Metadata = {
-  title: "Book a Consultation — DermaSoul Aesthetics",
-  description: "Send DermaSoul Aesthetics an inquiry and we'll reply by email.",
+  title: "Book a Consultation — DermaSoul Medical Aesthetics",
+  description: "Send DermaSoul Medical Aesthetics an inquiry and we'll reply by email.",
 };
 
 /**
@@ -38,7 +38,12 @@ export default async function InquiryPage({ searchParams }: PageProps<"/inquiry"
                 </li>
                 <li>
                   <span>Phone</span>
-                  <a href={`tel:${brand.phone.replace(/\s/g, "")}`}>{brand.phone}</a>
+                  {brand.phones.map((phone, i) => (
+                    <span key={phone}>
+                      {i > 0 && ", "}
+                      <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>{phone}</a>
+                    </span>
+                  ))}
                 </li>
               </ul>
             </div>

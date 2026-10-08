@@ -62,7 +62,7 @@ function Letterhead({ doctor }: { doctor: PadPeople["doctor"] }) {
           {/* eslint-disable-next-line @next/next/no-img-element -- must be in the
               document before window.print() fires, not lazy-loaded */}
           <img
-            src="/brand/mark-light.png"
+            src="/brand/mark-light-v2.png"
             alt=""
             width={62}
             height={62}
@@ -145,7 +145,7 @@ export function PadSheet({
           {/* Watermark, like the seal on a printed pad. */}
           {/* eslint-disable-next-line @next/next/no-img-element -- see Letterhead */}
           <img
-            src="/brand/mark-256.png"
+            src="/brand/mark-256-v2.png"
             alt=""
             aria-hidden
             width={256}
