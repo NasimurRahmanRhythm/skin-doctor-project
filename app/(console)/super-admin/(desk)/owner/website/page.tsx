@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { getGoogleReviews } from "@/lib/site/google-reviews";
 import { publicImageUrl } from "@/lib/site-media";
 import { createClient } from "@/lib/supabase/server";
+import { socialDefaults } from "@/lib/site/content";
 import { SECTIONS, sectionByKey } from "@/lib/website-sections";
 import SectionManager, { type ManagedRow } from "./section-manager";
 import { GoogleReviewsForm, SocialLinksForm, type SocialLinks } from "./settings-forms";
@@ -61,12 +62,13 @@ export default async function WebsitePage({
       const ig = get("instagram");
       const other = get("social");
       social = {
-        instagram: ig.url ?? "",
+        // Filled with the clinic's own profiles until other links are saved.
+        instagram: ig.url || socialDefaults.instagram,
         handle: ig.handle ?? "",
         facebook: other.facebook ?? "",
         x: other.x ?? "",
         linkedin: other.linkedin ?? "",
-        youtube: other.youtube ?? "",
+        youtube: other.youtube || socialDefaults.youtube,
       };
     }
 

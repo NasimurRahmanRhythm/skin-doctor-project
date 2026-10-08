@@ -8,6 +8,7 @@ export type Inquiry = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   message: string;
   is_read: boolean;
   when: string;
@@ -43,6 +44,7 @@ export default function InquiryItem({ inquiry: q }: { inquiry: Inquiry }) {
           <span className="flex flex-wrap items-baseline gap-x-2">
             <span className={q.is_read ? "font-semibold" : "font-extrabold"}>{q.name}</span>
             <span className="text-xs font-medium text-muted">{q.email}</span>
+            {q.phone && <span className="text-xs font-medium text-muted tabular-nums">{q.phone}</span>}
           </span>
           {!open && <span className="mt-0.5 block truncate text-sm font-normal text-muted">{firstLine}</span>}
         </span>
@@ -56,6 +58,11 @@ export default function InquiryItem({ inquiry: q }: { inquiry: Inquiry }) {
             <a href={reply} className="text-sm font-bold text-primary hover:underline">
               Reply by email
             </a>
+            {q.phone && (
+              <a href={`tel:${q.phone.replace(/[^\d+]/g, "")}`} className="text-sm font-bold text-primary hover:underline">
+                Call {q.phone}
+              </a>
+            )}
             <form action={setInquiryRead}>
               <input type="hidden" name="id" value={q.id} />
               <input type="hidden" name="read" value="0" />

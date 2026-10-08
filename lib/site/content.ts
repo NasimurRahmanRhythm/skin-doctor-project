@@ -34,6 +34,29 @@ export const brand = {
   mapQuery: "23.792443629506643,90.40841004952195",
 };
 
+/**
+ * The clinic's own profiles. The footer icons and the floating Instagram
+ * button use these unless the owner saves other links under Social media in
+ * the dashboard, which take priority.
+ */
+export const socialDefaults = {
+  instagram: "https://www.instagram.com/dermasoulmedical/",
+  youtube: "https://www.youtube.com/@DermaSoulMedical",
+};
+
+/**
+ * Instagram's link that opens a chat with a profile: ig.me/m/<username>.
+ * In the Instagram app it opens straight into the conversation; in a browser
+ * it opens Instagram's messages (after signing in). Null if the profile link
+ * has no username in it.
+ */
+export function instagramChatUrl(profileUrl: string): string | null {
+  const name = profileUrl
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+    .split(/[/?#]/)[0];
+  return name ? `https://ig.me/m/${encodeURIComponent(name)}` : null;
+}
+
 /** The Google Maps embed for brand.mapQuery; needs no API key. */
 export const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(brand.mapQuery)}&z=16&output=embed`;
 
@@ -61,7 +84,7 @@ export const hero = {
   title: ["Care that meets", "your skin"],
   accent: "where it is.",
   lede:
-    "DermaSoul Aesthetics is a boutique dermatology studio blending clinical treatments with an unhurried, personal experience — for skin that changes with you.",
+    "DermaSoul Medical Aesthetics is a boutique dermatology studio blending clinical treatments with an unhurried, personal experience — for skin that changes with you.",
 };
 
 export const treatmentsIntro = {

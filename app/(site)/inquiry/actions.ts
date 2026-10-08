@@ -8,12 +8,21 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export type InquiryState = {
   ok?: boolean;
   error?: string;
-  fields?: Partial<Record<"name" | "email" | "message", string>>;
+  fields?: Partial<Record<"name" | "email" | "phone" | "message", string>>;
 };
 
 const schema = z.object({
   name: z.string().trim().min(1, "Please enter your name.").max(120, "That name is too long."),
   email: z.string().trim().toLowerCase().email("Please enter a valid email address.").max(254),
+  // Optional. Digits with the usual spaces, dashes, brackets or a leading +.
+  phone: z
+    .string()
+    .trim()
+    .max(30, "That phone number is too long.")
+    .refine(
+      (v) => v === "" || (/^\+?[\d\s\-().]+$/.test(v) && v.replace(/\D/g, "").length >= 6),
+      "Please enter a valid phone number.",
+    ),
   message: z
     .string()
     .trim()
@@ -42,6 +51,7 @@ export async function submitInquiry(_prev: InquiryState, formData: FormData): Pr
   const parsed = schema.safeParse({
     name: formData.get("name") ?? "",
     email: formData.get("email") ?? "",
+    phone: formData.get("phone") ?? "",
     message: formData.get("message") ?? "",
   });
   if (!parsed.success) {
@@ -73,7 +83,15 @@ export async function submitInquiry(_prev: InquiryState, formData: FormData): Pr
     return { error: "We've already received several messages from you this hour. We'll be in touch soon." };
   }
 
-  const { error } = await admin.from("inquiries").insert({ ...parsed.data, ip });
+  const { phone, ...rest } = parsed.data;
+  let { error } = await admin.from("inquiries").insert({ ...rest, phone: phone || null, ip });
+  // Before the phone column exists (migration 20261008000022), keep the
+  // number by adding it to the message rather than losing the inquiry.
+  if (error && phone && /phone/i.test(error.message)) {
+    ({ error } = await admin
+      .from("inquiries")
+      .insert({ ...rest, message: `${rest.message}\n\nPhone: ${phone}`, ip }));
+  }
   if (error) {
     console.error("inquiry insert:", error.message);
     return { error: "Sorry — your message could not be sent. Please try again in a moment." };

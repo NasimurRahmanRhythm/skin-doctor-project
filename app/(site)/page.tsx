@@ -20,6 +20,7 @@ import Social from "@/components/site/sections/Social";
 import Faq from "@/components/site/sections/Faq";
 import Cta from "@/components/site/sections/Cta";
 import Footer, { FabInstagram } from "@/components/site/sections/Footer";
+import { socialDefaults } from "@/lib/site/content";
 import {
   // getDoctors,
   getInstagram,
@@ -102,7 +103,7 @@ export default async function Home() {
       </main>
       <Footer social={social} />
       <RoamingBadge />
-      <FabInstagram url={instagram?.url ?? null} />
+      <FabInstagram profileUrl={social.find((s) => s.network === "instagram")?.url ?? socialDefaults.instagram} />
       <div className="grain" aria-hidden />
     </>
   );

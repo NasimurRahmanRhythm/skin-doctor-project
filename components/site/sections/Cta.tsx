@@ -48,7 +48,7 @@ export default function Cta() {
         <p>{cta.body}</p>
         <Magnetic strength={0.4}>
           <a href="/inquiry" className="cta-orb" data-cursor="Book">
-            <span>Book a Consultation</span>
+            <span>Book a Consultation / Send Inquiry</span>
             <Arrow width={26} />
           </a>
         </Magnetic>

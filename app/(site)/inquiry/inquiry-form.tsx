@@ -16,7 +16,7 @@ function Send() {
   );
 }
 
-/** Name, email and a message; nothing else is asked for. */
+/** Name, email, an optional phone number, and a message. */
 export default function InquiryForm({ about }: { about: string | null }) {
   const [state, action] = useActionState<InquiryState, FormData>(submitInquiry, {});
   // When the visitor first touched the form. A post with none, or one that
@@ -76,6 +76,20 @@ export default function InquiryForm({ about }: { about: string | null }) {
         />
         <label htmlFor="email">Email</label>
         {err.email && <p className="field-error">{err.email}</p>}
+      </div>
+      <div className="field">
+        <input
+          id="phone"
+          name="phone"
+          type="tel"
+          placeholder=" "
+          maxLength={30}
+          autoComplete="tel"
+          inputMode="tel"
+          aria-invalid={!!err.phone}
+        />
+        <label htmlFor="phone">Phone number</label>
+        {err.phone && <p className="field-error">{err.phone}</p>}
       </div>
       <div className="field">
         <textarea

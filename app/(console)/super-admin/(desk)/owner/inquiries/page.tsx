@@ -19,7 +19,8 @@ export default async function InquiriesPage({
   const supabase = await createClient();
   let q = supabase
     .from("inquiries")
-    .select("id, name, email, message, is_read, created_at", { count: "exact" })
+    // Every column, so the list still loads before the phone column exists.
+    .select("*", { count: "exact" })
     .order("created_at", { ascending: false })
     .limit(limit);
   if (unreadOnly) q = q.eq("is_read", false);
@@ -33,6 +34,7 @@ export default async function InquiriesPage({
     id: r.id as string,
     name: r.name as string,
     email: r.email as string,
+    phone: (r.phone as string | null | undefined) ?? null,
     message: r.message as string,
     is_read: r.is_read as boolean,
     when: `${formatClinicDate(r.created_at)}, ${formatClinicTime(r.created_at)}`,

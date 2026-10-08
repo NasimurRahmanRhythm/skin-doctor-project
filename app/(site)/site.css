@@ -948,9 +948,10 @@ html.has-cursor .site-modal button {
 .stmt-word {
   display: inline;
 }
-.stmt-word.is-accent {
-  font-style: italic;
-  color: var(--gold);
+/* The byline beside the statement, larger than the usual kicker. */
+.stmt-kicker {
+  font-size: 1.05rem;
+  line-height: 1.6;
 }
 .stmt-roam {
   right: 6%;

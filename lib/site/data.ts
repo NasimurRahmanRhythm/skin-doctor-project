@@ -1,6 +1,7 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getGoogleReviews, type GoogleReviews } from "@/lib/site/google-reviews";
 import { publicImageUrl } from "@/lib/site-media";
+import { socialDefaults } from "@/lib/site/content";
 
 /**
  * What the public website reads from the database: the lists the owner
@@ -307,13 +308,18 @@ const NETWORK_LABEL: Record<SocialNetwork, string> = {
   youtube: "YouTube",
 };
 
-/** The profiles the owner has set, in footer order; [] when none. */
+/**
+ * The clinic's profiles, in footer order: the links saved under Social media
+ * in the dashboard, else the clinic's own (socialDefaults).
+ */
 export async function getSocialLinks(): Promise<SiteSocialLink[]> {
   const [instagram, other] = await Promise.all([
     setting<{ url?: string }>("instagram"),
     setting<Partial<Record<Exclude<SocialNetwork, "instagram">, string>>>("social"),
   ]);
-  const urls: Partial<Record<SocialNetwork, string>> = { ...other, instagram: instagram?.url };
+  const saved: Partial<Record<SocialNetwork, string | undefined>> = { ...other, instagram: instagram?.url };
+  const urls: Partial<Record<SocialNetwork, string>> = { ...socialDefaults };
+  for (const [network, url] of Object.entries(saved)) if (url) urls[network as SocialNetwork] = url;
   return (Object.keys(NETWORK_LABEL) as SocialNetwork[]).flatMap((network) => {
     const url = urls[network];
     return url ? [{ network, label: NETWORK_LABEL[network], url }] : [];

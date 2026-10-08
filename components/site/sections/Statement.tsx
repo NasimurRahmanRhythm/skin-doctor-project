@@ -51,11 +51,11 @@ export default function Statement({ press }: { press: SiteLink[] }) {
       <div className="wrap stmt-grid">
         <div className="stmt-side">
           <Sprig className="stmt-sprig" />
-          <span className="kicker">DermaSoul — by Dr. Nusrat Liza</span>
+          <span className="kicker stmt-kicker">DermaSoul — by Dr. Nusrat Liza</span>
         </div>
         <p className="stmt-text">
           {words.map((w, i) => (
-            <span key={i} className={`stmt-word ${w === "unhurried," || w === "personal" ? "is-accent" : ""}`}>
+            <span key={i} className="stmt-word">
               {w}{" "}
             </span>
           ))}

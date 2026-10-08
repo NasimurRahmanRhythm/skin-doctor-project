@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "motion/react";
-import { brand, footer } from "@/lib/site/content";
+import { brand, footer, instagramChatUrl } from "@/lib/site/content";
 import type { SiteSocialLink, SocialNetwork } from "@/lib/site/data";
 import { Facebook, Instagram, LinkedIn, XLogo, YouTube } from "@/components/site/Icons";
 
@@ -98,16 +98,20 @@ export default function Footer({ social = [] }: { social?: SiteSocialLink[] }) {
   );
 }
 
-/** The floating Instagram button; not rendered until a profile is set. */
-export function FabInstagram({ url }: { url: string | null }) {
-  if (!url) return null;
+/**
+ * The floating Instagram button, bottom right on every page of the website.
+ * It opens a chat with the clinic's Instagram profile (`profileUrl`).
+ */
+export function FabInstagram({ profileUrl }: { profileUrl: string }) {
+  const href = instagramChatUrl(profileUrl) ?? profileUrl;
   return (
     <motion.a
-      href={url}
+      href={href}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       className="fab-ig"
       aria-label="Message us on Instagram"
+      title="Message us on Instagram"
       initial={{ scale: 0 }}
       animate={{ scale: 1 }}
       transition={{ delay: 3.4, type: "spring", stiffness: 260, damping: 18 }}
