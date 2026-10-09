@@ -1,4 +1,4 @@
-# Lumen & Leaf — Clinic Management System (`/super-admin`)
+# Lumen & Leaf — Clinic Management System (`/admin`)
 
 ## Context
 
@@ -7,10 +7,10 @@
 - `lumen-leaf-patient-records (1).html` — a working single-file prototype of the whole clinic flow (intake → nurse vitals → doctor entries → find & print). It has no auth, no roles, and stores data in an in-memory `Map` unless a Claude artifact `db` is present. **This is the functional spec.**
 - `lumen-leaf-website.html` — the public marketing site. Out of scope for now; the app will be structured so it can be ported in later.
 
-The goal is to turn the prototype into a real multi-user clinic system under `/super-admin`, where four roles log in with their own email + OTP and each sees only their own slice of the workflow, with a live hand-off notification between desks and role-appropriate cumulative printing.
+The goal is to turn the prototype into a real multi-user clinic system under `/admin`, where four roles log in with their own email + OTP and each sees only their own slice of the workflow, with a live hand-off notification between desks and role-appropriate cumulative printing.
 
 **Decisions locked in with the user:**
-- Scope: `/super-admin` staff system only for now.
+- Scope: `/admin` staff system only for now.
 - Receptionist: can create check-ins **and** see a list of the visits they created today (to reprint / fix typos). No clinical data.
 - Data model: **one patient, many visits** — permanent patient code + a visit row per check-in.
 - Notifications: **in-app realtime** (sound + badge + toast while the dashboard is open). Web Push is a later phase, and the schema is designed so it can be added without rework.
@@ -316,7 +316,7 @@ RLS enforces **row** access. **Column** access (a nurse must not write `diagnosi
 
 ```
 app/
-  super-admin/
+  admin/
     login/page.tsx                   email → OTP → role-based redirect
     layout.tsx                       auth gate + role-aware shell/nav
     page.tsx                         redirects to the right desk for your role
@@ -336,7 +336,7 @@ app/
 
     print/[visitId]/page.tsx?scope=  shared print renderer
   api/cron/ping/route.ts             daily keep-alive (anti-pause)
-  middleware.ts                      session refresh + /super-admin gate
+  middleware.ts                      session refresh + /admin gate
 lib/supabase/{client,server,admin}.ts
 lib/{codes,roles,validation}.ts
 components/{NotificationBell,RealtimeProvider,PrintSheet,...}

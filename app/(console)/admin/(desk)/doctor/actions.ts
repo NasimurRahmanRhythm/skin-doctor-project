@@ -1,0 +1,58 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { requireRole } from "@/lib/auth";
+import { padSchema, type PadData } from "@/lib/prescription";
+import { createClient } from "@/lib/supabase/server";
+
+export type SavePadResult = { error?: string; savedAt?: string };
+
+/**
+ * Saves the prescription pad. Called by the editor's autosave, so it takes the
+ * pad as data rather than a form, and is safe to call repeatedly.
+ *
+ * `complete` also moves the visit to completed. Nothing is required to
+ * complete: a follow-up that only reviews results can end with an empty Rx.
+ */
+export async function savePad(
+  visitId: string,
+  pad: PadData,
+  complete = false,
+): Promise<SavePadResult> {
+  await requireRole("doctor");
+  if (!z.uuid().safeParse(visitId).success) return { error: "Missing visit." };
+
+  const parsed = padSchema.safeParse(pad);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the prescription." };
+  }
+  const p = parsed.data;
+
+  // RLS limits this to the doctor's own visits; the column guard keeps the
+  // nurse's vitals out of reach.
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("visits")
+    .update({
+      complaints: p.complaints,
+      examinations: p.examinations,
+      investigations: p.investigations,
+      advices: p.advices,
+      medicines: p.medicines,
+      follow_up: p.followUp || null,
+      ...(complete ? { status: "completed" as const } : {}),
+    })
+    .eq("id", visitId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data) return { error: "This visit is not assigned to you." };
+
+  if (complete) {
+    revalidatePath(`/admin/doctor/${visitId}`);
+    revalidatePath("/admin/doctor");
+  }
+  return { savedAt: new Date().toISOString() };
+}

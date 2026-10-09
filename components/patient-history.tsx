@@ -192,7 +192,7 @@ export default async function PatientHistory({
                   {STATUS_LABEL[v.status] ?? v.status}
                 </span>
                 <Link
-                  href={`/super-admin/print/${v.id}`}
+                  href={`/admin/print/${v.id}`}
                   target="_blank"
                   className="no-print text-xs font-bold text-primary underline-offset-4 transition-ui hover:underline"
                 >

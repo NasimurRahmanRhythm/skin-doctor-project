@@ -97,7 +97,7 @@ export async function submitInquiry(_prev: InquiryState, formData: FormData): Pr
     return { error: "Sorry — your message could not be sent. Please try again in a moment." };
   }
 
-  revalidatePath("/super-admin/owner/inquiries");
-  revalidatePath("/super-admin/owner");
+  revalidatePath("/admin/owner/inquiries");
+  revalidatePath("/admin/owner");
   return { ok: true };
 }

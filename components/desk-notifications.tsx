@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { markAllRead } from "@/app/(console)/super-admin/(desk)/notification-actions";
+import { markAllRead } from "@/app/(console)/admin/(desk)/notification-actions";
 
 export type DeskNotification = {
   id: string;

@@ -14,10 +14,10 @@ export type SessionStaff = {
 
 /** Where each role lands after signing in. */
 export const ROLE_HOME: Record<AppRole, string> = {
-  owner: "/super-admin/owner",
-  receptionist: "/super-admin/reception",
-  nurse: "/super-admin/nurse",
-  doctor: "/super-admin/doctor",
+  owner: "/admin/owner",
+  receptionist: "/admin/reception",
+  nurse: "/admin/nurse",
+  doctor: "/admin/doctor",
 };
 
 export const ROLE_LABEL: Record<AppRole, string> = {
@@ -56,7 +56,7 @@ export async function getSessionStaff(): Promise<SessionStaff | null> {
 
 export async function requireStaff(): Promise<SessionStaff> {
   const staff = await getSessionStaff();
-  if (!staff) redirect("/super-admin/login");
+  if (!staff) redirect("/admin/login");
   return staff;
 }
 

@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { requireEnv } from "@/lib/env";
 
-const LOGIN_PATH = "/super-admin/login";
+const LOGIN_PATH = "/admin/login";
 
 /**
  * How long a sign-in lasts before we make them do it again.
@@ -80,14 +80,14 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !onLoginPage) {
     const search =
-      path === "/super-admin"
+      path === "/admin"
         ? ""
         : `?next=${encodeURIComponent(path)}`;
     return redirectTo(LOGIN_PATH, search);
   }
 
   if (user && onLoginPage) {
-    return redirectTo("/super-admin");
+    return redirectTo("/admin");
   }
 
   return response;

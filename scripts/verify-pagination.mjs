@@ -131,7 +131,7 @@ const cleanup = async () => {
 
 try {
   const url = (p) =>
-    `${BASE}/super-admin/owner?q=Pagination+Probe${p > 1 ? `&page=${p}` : ""}`;
+    `${BASE}/admin/owner?q=Pagination+Probe${p > 1 ? `&page=${p}` : ""}`;
 
   console.log("\nPaging through the owner table");
   const seen = new Set();

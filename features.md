@@ -14,7 +14,7 @@ All 22 features are built. Type-check, lint and `next build` pass. The public pa
 
 **Differences from the plan above**
 - The site tables are prefixed `site_`: `site_links` (press + certifications, shared), `site_treatments`, `site_packages`, `site_results`, `site_products`, `site_instagram_posts`, `site_settings`. Inquiries are stored in `inquiries`.
-- The owner manages everything at `/super-admin/owner/website` (one tab per list, plus Google reviews) and `/super-admin/owner/inquiries`. Both are linked from the owner dashboard.
+- The owner manages everything at `/admin/owner/website` (one tab per list, plus Google reviews) and `/admin/owner/inquiries`. Both are linked from the owner dashboard.
 - Uploaded images are shrunk in the browser before upload. The server-action body limit is raised to 12 MB in `next.config.ts`.
 - The Follow Up box saves with the pad's autosave, so it has no separate Save button.
 - Inquiries are visible to the **owner only**, which was the open question in feature 21.
@@ -34,7 +34,7 @@ All 22 features are built. Type-check, lint and `next build` pass. The public pa
 ## 1. Tablet / Non-tablet → Medicine / Non-medicine, and a multi-line box for Non-medicine ✅
 
 **Where:** the Rx pad's medicine section, used by the doctor
-([rx-editor.tsx](app/(console)/super-admin/(desk)/doctor/[visitId]/rx-editor.tsx), `MedicineList`).
+([rx-editor.tsx](app/(console)/admin/(desk)/doctor/[visitId]/rx-editor.tsx), `MedicineList`).
 
 **What changes**
 
@@ -79,9 +79,9 @@ All 22 features are built. Type-check, lint and `next build` pass. The public pa
 
 - [ ] New migration `supabase/migrations/2026xxxx_follow_up.sql`: add `follow_up text` to `public.visits`. Check that the RLS / update policies cover the new column.
 - [ ] `lib/prescription.ts`: add `followUp: string` to `PadData`, `padSchema` (trimmed, max ~1000), `PadSource`, `PAD_COLUMNS` and the function that builds the pad from a visit.
-- [ ] `app/(console)/super-admin/(desk)/doctor/actions.ts` `savePad`: write `follow_up`.
+- [ ] `app/(console)/admin/(desk)/doctor/actions.ts` `savePad`: write `follow_up`.
 - [ ] `rx-editor.tsx`: add a `PadSection title="Follow Up"` below the medicine section in the `right` column, with a textarea and a Save button. It must also work with the existing autosave and dirty tracking.
-- [ ] `components/rx-pad.tsx`: add a read-only `ReadFollowUp` (with `whitespace-pre-line`) and use it on the print page (`app/(console)/super-admin/print/[visitId]/page.tsx`).
+- [ ] `components/rx-pad.tsx`: add a read-only `ReadFollowUp` (with `whitespace-pre-line`) and use it on the print page (`app/(console)/admin/print/[visitId]/page.tsx`).
 - [ ] `previous-visits.tsx`: show the follow-up for past visits, if past visits show the pad.
 - [ ] Check that the print still fits on one A4 page.
 
@@ -113,9 +113,9 @@ All 22 features are built. Type-check, lint and `next build` pass. The public pa
 ## 4. Owner manages Designations; doctors pick one ✅
 
 **Where:** the owner panel, Staff page
-([owner/staff/page.tsx](app/(console)/super-admin/(desk)/owner/staff/page.tsx),
-[add-staff-form.tsx](app/(console)/super-admin/(desk)/owner/staff/add-staff-form.tsx),
-[owner/actions.ts](app/(console)/super-admin/(desk)/owner/actions.ts)).
+([owner/staff/page.tsx](app/(console)/admin/(desk)/owner/staff/page.tsx),
+[add-staff-form.tsx](app/(console)/admin/(desk)/owner/staff/add-staff-form.tsx),
+[owner/actions.ts](app/(console)/admin/(desk)/owner/actions.ts)).
 
 **Today:** when adding a doctor, "Specialty" is a free-text input. The value is saved in `staff.specialty` and printed under the doctor's name on the prescription letterhead.
 
@@ -355,7 +355,7 @@ All 22 features are built. Type-check, lint and `next build` pass. The public pa
 
 ## 11. Remove the Patient Portal completely ✅
 
-**Goal:** patients cannot sign in or sign up anywhere on the site. Only the staff console (`/super-admin/login`) stays.
+**Goal:** patients cannot sign in or sign up anywhere on the site. Only the staff console (`/admin/login`) stays.
 
 **Today:** near the bottom of the landing page there is a "Patient Portal" section ([Portal.tsx](components/site/sections/Portal.tsx)) with a sign-in / create-account form. It is **front-end only**: the `onSubmit` does not call Supabase or any API, so no patient accounts exist and there is no data to migrate or delete.
 
@@ -372,7 +372,7 @@ All 22 features are built. Type-check, lint and `next build` pass. The public pa
   - [ ] `content.ts` FAQ "How do I access the patient portal?": **remove** this FAQ entry.
   - [ ] `content.ts` review (~line 182), "Booked through the patient portal…": ~~reword it~~ **moot**, because feature 18 replaces all hard-coded reviews with Google reviews.
 - [ ] Check that no other code references `Portal`, `portal` or `#portal` (grep), and that `RoamingBadge` has no portal anchor.
-- [ ] The staff login at `/super-admin/login` and `proxy.ts` are **not** touched.
+- [ ] The staff login at `/admin/login` and `proxy.ts` are **not** touched.
 
 ---
 
@@ -380,7 +380,7 @@ All 22 features are built. Type-check, lint and `next build` pass. The public pa
 
 General approach for every "comes from the DB" item below:
 
-- The owner manages it from a new **"Website"** area in the owner panel (`/super-admin/owner/website`), linked from the owner dashboard next to Staff. Each landing-page item gets its own card/tab there.
+- The owner manages it from a new **"Website"** area in the owner panel (`/admin/owner/website`), linked from the owner dashboard next to Staff. Each landing-page item gets its own card/tab there.
 - The data lives in Supabase tables with RLS: **anyone (anon) can read** active rows, and **only the owner** can write (through server actions with `requireRole("owner")`).
 - The landing page (`app/(site)/page.tsx`) is a server component. It reads the rows there and passes them as props into the client sections. After any owner change, the action calls `revalidatePath("/")` so the site updates immediately.
 - If a table is empty, the section/strip hides itself instead of showing placeholders.
@@ -419,11 +419,11 @@ General approach for every "comes from the DB" item below:
 
 **Owner dashboard**
 
-- [ ] New page `app/(console)/super-admin/(desk)/owner/website/page.tsx`, plus a link to it from the owner dashboard.
+- [ ] New page `app/(console)/admin/(desk)/owner/website/page.tsx`, plus a link to it from the owner dashboard.
 - [ ] "As seen in" card:
   - a list of articles showing the title, the link (opens in a new tab) and an active toggle, with ↑/↓ to reorder, Edit and Delete
   - an add form with **Title** and **Link**
-- [ ] Server actions in `owner/actions.ts` (or a new `owner/website/actions.ts`): `addPressArticle`, `updatePressArticle`, `deletePressArticle`, `movePressArticle`, `setPressArticleActive`. Each one uses `requireRole("owner")` and zod (title 1–120 chars, `url` must be a valid http(s) URL), then `revalidatePath("/")` and `revalidatePath("/super-admin/owner/website")`.
+- [ ] Server actions in `owner/actions.ts` (or a new `owner/website/actions.ts`): `addPressArticle`, `updatePressArticle`, `deletePressArticle`, `movePressArticle`, `setPressArticleActive`. Each one uses `requireRole("owner")` and zod (title 1–120 chars, `url` must be a valid http(s) URL), then `revalidatePath("/")` and `revalidatePath("/admin/owner/website")`.
 
 **Landing page**
 
@@ -463,7 +463,7 @@ General approach for every "comes from the DB" item below:
 - [ ] RLS: public select of active rows, full access for the owner (same as the other site tables).
 - [ ] No seed. The current names are template placeholders (e.g. American societies), so the section stays hidden until the owner adds real ones.
 
-**Owner dashboard** (`/super-admin/owner/website`, "Certifications & Societies" card)
+**Owner dashboard** (`/admin/owner/website`, "Certifications & Societies" card)
 
 - [ ] The same card component as "As seen in", parameterised by `kind`: a list (title, link, active toggle, ↑/↓, Edit, Delete) plus an add form (Title, Link).
 - [ ] The same server actions as feature 12, generalised: `addSiteLink(kind, …)`, `updateSiteLink`, `deleteSiteLink`, `moveSiteLink`, `setSiteLinkActive`. They use `requireRole("owner")` and zod (http(s) URL), then `revalidatePath("/")`.
@@ -502,7 +502,7 @@ General approach for every "comes from the DB" item below:
 - [ ] Find the clinic's **Place ID** (Google's "Place ID Finder", or one Text Search call with the clinic name and address).
 - [ ] Add `GOOGLE_PLACES_API_KEY` to `.env.local`, `.env.example` (empty) and the Vercel env vars. It is **server-only**: never prefix it with `NEXT_PUBLIC_`.
 
-**Owner dashboard** (`/super-admin/owner/website`, "Google reviews" card)
+**Owner dashboard** (`/admin/owner/website`, "Google reviews" card)
 
 - [ ] A **Google Place ID** field, plus a read-only preview of what Google currently returns (rating, count, the 5 reviews), so the owner can confirm it is the right place.
 - [ ] A **minimum stars to show** setting (default **4**). Reviews below this are hidden on the site. The overall rating and count are always Google's real numbers.
@@ -581,7 +581,7 @@ General approach for every "comes from the DB" item below:
 - [ ] Images go in the `site-media` bucket (feature 14) under `site-media/products/<id>.<ext>`.
 - [ ] No seed. The current products are template placeholders with $ prices, so the section stays hidden until the owner adds products.
 
-**Owner dashboard** (`/super-admin/owner/website`, "Shop" card)
+**Owner dashboard** (`/admin/owner/website`, "Shop" card)
 
 - [ ] A list showing a thumbnail, title, price and an active toggle, with ↑/↓, Edit and Delete.
 - [ ] An add/edit form with Title, Description (textarea), Price and Image (picker with preview, removable). Every field is optional, but at least a title or an image is required.
@@ -642,7 +642,7 @@ General approach for every "comes from the DB" item below:
 - [ ] RLS: same as the other site tables.
 - [ ] Images go in `site-media/instagram/<id>.<ext>`.
 
-**Owner dashboard** (`/super-admin/owner/website`, "Instagram" card)
+**Owner dashboard** (`/admin/owner/website`, "Instagram" card)
 
 - [ ] Top: a **Profile link** input (must be an `instagram.com` URL) and an optional **Handle**, with a Save button.
 - [ ] Below: a **Posts** list showing a thumbnail, the post link (opens in a new tab) and an active toggle, with ↑/↓, Edit and Delete. The add form has **Image** (required, with preview) and **Post link** (required).
@@ -695,7 +695,7 @@ General approach for every "comes from the DB" item below:
 - [ ] Server action `submitInquiry` (`app/(site)/inquiry/actions.ts`):
   - zod: trim everything, name 1–120 characters, a valid email, message 1–3000 characters.
   - **Spam protection:** a hidden honeypot field (reject if filled), plus a minimum time-on-page check (a submit < 3 s after render is rejected), plus a simple rate limit: max ~5 inquiries per email or IP per hour, checked against `inquiries` (`x-forwarded-for` on Vercel).
-  - Insert with the service-role client, then `revalidatePath("/super-admin/owner/inquiries")`.
+  - Insert with the service-role client, then `revalidatePath("/admin/owner/inquiries")`.
   - Return field errors inline. Never expose DB errors.
 - [ ] Use `useActionState` for pending/disabled submit, inline errors and the success state. The form is cleared after success.
 - [ ] `metadata`: a title like "Book a Consultation — DermaSoul".
@@ -711,7 +711,7 @@ General approach for every "comes from the DB" item below:
 
 **Owner dashboard: "Inquiries"**
 
-- [ ] New page `app/(console)/super-admin/(desk)/owner/inquiries/page.tsx`, linked from the owner dashboard with an **unread count badge** (e.g. "Inquiries · 3 new").
+- [ ] New page `app/(console)/admin/(desk)/owner/inquiries/page.tsx`, linked from the owner dashboard with an **unread count badge** (e.g. "Inquiries · 3 new").
 - [ ] A list, newest first, showing the name, email, the first line of the message, the date/time (clinic timezone, `formatClinicDate`/`formatClinicTime`), and **unread rows in bold** with a dot.
 - [ ] Clicking a row expands it (or opens a panel) to show the full message (`whitespace-pre-line`). Opening it marks it **read**.
 - [ ] Per inquiry: **Reply** (`mailto:<email>?subject=Re: your inquiry to DermaSoul`), **Mark unread**, **Delete** (with confirm).
@@ -781,7 +781,7 @@ General approach for every "comes from the DB" item below:
 - [ ] RLS: same as `press_articles`, so anon/authenticated can select active rows and the owner has full access.
 - [ ] Seed the 6 current treatments from `content.ts` (title + body as the description) so the site isn't empty after the migration.
 
-**Owner dashboard** (`/super-admin/owner/website`, "Treatments" card)
+**Owner dashboard** (`/admin/owner/website`, "Treatments" card)
 
 - [ ] A list of treatments showing the title, the first line of the description and an active toggle, with ↑/↓ to reorder, Edit and Delete.
 - [ ] An add/edit form with **Title** (input) and **Description** (multi-line textarea). Line breaks are kept.
@@ -852,7 +852,7 @@ General approach for every "comes from the DB" item below:
 - [ ] Storage: a **public** bucket `site-media` for website images. Owner-only upload and delete through server actions. Packages go under `site-media/packages/<id>.<ext>`. Future site images can use the same bucket.
 - [ ] Seed the 3 current packages (title, body as the description, price left empty) with the current poster images uploaded as their image, so the site isn't empty.
 
-**Owner dashboard** (`/super-admin/owner/website`, "Packages" card)
+**Owner dashboard** (`/admin/owner/website`, "Packages" card)
 
 - [ ] A list of packages showing an image thumbnail, title, price (or "—") and an active toggle, with ↑/↓ to reorder, Edit and Delete.
 - [ ] An add/edit form with **Title**, **Description** (textarea), **Image** (file picker with preview, jpg/png/webp, max ~5 MB) and **Price** (optional, placeholder "Leave empty to hide price"). When editing, the current image is kept unless a new one is chosen.
@@ -910,7 +910,7 @@ General approach for every "comes from the DB" item below:
 - [ ] Images go in the `site-media` bucket (feature 14) under `site-media/results/<id>-before.<ext>` and `…-after.<ext>`.
 - [ ] **No seed.** The current items are placeholders (one photo for both sides), so the section stays hidden until the owner uploads real before/after pairs.
 
-**Owner dashboard** (`/super-admin/owner/website`, "Results" card)
+**Owner dashboard** (`/admin/owner/website`, "Results" card)
 
 - [ ] A list of results showing small before/after thumbnails side by side, title and an active toggle, with ↑/↓ to reorder, Edit and Delete.
 - [ ] An add/edit form with:
