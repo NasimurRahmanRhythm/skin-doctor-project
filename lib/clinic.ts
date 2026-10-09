@@ -14,7 +14,7 @@ export const CLINIC_TZ = "Asia/Dhaka";
 export const CLINIC_ADDRESS = "Level-9, BTI Armitage, House 77, Road 12, Banani, Dhaka 1213";
 /** Every number the clinic answers; the website's contact areas list them all. */
 export const CLINIC_PHONES = ["01341-333344", "01303-228899"];
-/** The main number, for the prescription and the payment slip, which have room for one. */
+/** The main number, where only one fits. */
 export const CLINIC_PHONE = CLINIC_PHONES[0];
 
 /** Bangladesh has observed no DST since 2009, so the offset is fixed. */

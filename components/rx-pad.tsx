@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CLINIC_ADDRESS, CLINIC_PHONE } from "@/lib/clinic";
+import { CLINIC_ADDRESS, CLINIC_PHONES } from "@/lib/clinic";
 import {
   formatDose,
   formatDuration,
@@ -112,7 +112,7 @@ function Footer() {
         style={{ background: GOLD_BAND }}
       >
         <span className="min-w-0">{CLINIC_ADDRESS}</span>
-        <span className="shrink-0 tabular-nums">{CLINIC_PHONE}</span>
+        <span className="shrink-0 tabular-nums">{CLINIC_PHONES.join("  ·  ")}</span>
       </div>
     </footer>
   );
