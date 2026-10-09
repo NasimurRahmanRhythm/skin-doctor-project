@@ -77,11 +77,9 @@ export default async function PaymentsPage({
 
   let query = supabase
     .from("payment_slips")
-    .select(
-      `id, receipt_no, slip_date, patient_name, patient_age, patient_gender,
-       patient_phone, patient_address, items, total, receptionist_id, created_at`,
-      { count: "exact" },
-    )
+    // Every column, so the list still loads before patient_code exists
+    // (migration 20261009000024).
+    .select("*", { count: "exact" })
     .order("slip_date", { ascending: false })
     .order("created_at", { ascending: false })
     .range(offset, offset + PER_PAGE - 1);
@@ -281,7 +279,7 @@ export default async function PaymentsPage({
                   <tbody>
                     {rows.map((s) => {
                       const items = (Array.isArray(s.items) ? s.items : []) as Item[];
-                      const about = [s.patient_phone, s.patient_age, s.patient_gender]
+                      const about = [s.patient_code, s.patient_phone, s.patient_age, s.patient_gender]
                         .filter(Boolean)
                         .join(" · ");
                       return (
@@ -312,7 +310,7 @@ export default async function PaymentsPage({
                           <td className={`${tdCell} min-w-64`}>
                             <details>
                               <summary className="font-semibold marker:text-muted">
-                                {items[0]?.description || "Item"}
+                                {items.length === 0 ? "No items" : items[0]?.description || "Item"}
                                 {items.length > 1 && (
                                   <span className="text-muted"> +{items.length - 1} more</span>
                                 )}

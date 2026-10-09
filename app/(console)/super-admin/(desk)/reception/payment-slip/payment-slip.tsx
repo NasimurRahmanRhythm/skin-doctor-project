@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState, type CSSProperties } from "react";
 import { btnGhost, btnPrimary } from "@/components/ui";
 import { amountInWords, formatPaisa, lineTotalPaisa } from "@/lib/amount-in-words";
-import { CLINIC_ADDRESS, CLINIC_PHONE } from "@/lib/clinic";
+import { CLINIC_ADDRESS, CLINIC_PHONES, clinicToday } from "@/lib/clinic";
 import { savePaymentSlip } from "./actions";
 
 /**
@@ -30,7 +30,7 @@ const blankRows = (from = 0): Row[] =>
 
 const BLANK_INFO = {
   date: "",
-  receiptNo: "",
+  patientCode: "",
   name: "",
   age: "",
   gender: "",
@@ -52,6 +52,9 @@ const PAPER = {
 } as CSSProperties;
 
 const BAND = "bg-[#f1e4d3] [print-color-adjust:exact] [-webkit-print-color-adjust:exact]";
+
+/** The letterhead in the logo's own colours: cream lettering on peach. */
+const LETTERHEAD = "bg-[#dca471] [print-color-adjust:exact] [-webkit-print-color-adjust:exact]";
 
 /** "2026-10-06" → "06/10/2026". */
 function formatSlipDate(iso: string): string {
@@ -76,14 +79,17 @@ function LineField({
 }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className={`flex min-w-0 items-end gap-1.5 ${className}`}>
-      <span className="shrink-0 text-[13px] italic text-muted">{label}:</span>
+      <span className="shrink-0 text-[13px] text-muted">{label}:</span>
       <input type="text" autoComplete="off" className={lineInput} {...input} />
     </label>
   );
 }
 
 export default function PaymentSlip() {
-  const [info, setInfo] = useState(BLANK_INFO);
+  // The date starts as today; every other field starts empty.
+  const [info, setInfo] = useState(() => ({ ...BLANK_INFO, date: clinicToday() }));
+  // Assigned by the server when the slip is saved.
+  const [receiptNo, setReceiptNo] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>(() => blankRows());
   const nextId = useRef(START_ROWS);
   const [saved, setSaved] = useState(false);
@@ -109,7 +115,8 @@ export default function PaymentSlip() {
   // A saved slip is already on file, so starting over loses nothing.
   const clear = () => {
     if (!saved && !window.confirm("Clear everything on this slip?")) return;
-    setInfo(BLANK_INFO);
+    setInfo({ ...BLANK_INFO, date: clinicToday() });
+    setReceiptNo(null);
     setRows(blankRows(nextId.current));
     nextId.current += START_ROWS;
     setSaved(false);
@@ -128,6 +135,7 @@ export default function PaymentSlip() {
         setError(result.error);
         return;
       }
+      setReceiptNo(result.receiptNo);
       setSaved(true);
       // After the locked sheet has painted, so that is what reaches the printer.
       setTimeout(() => window.print(), 150);
@@ -216,63 +224,66 @@ export default function PaymentSlip() {
         style={PAPER}
         className="slip-sheet mx-auto w-full max-w-[210mm] overflow-hidden rounded-card border border-hairline bg-surface text-fg shadow-card"
       >
-        <header className={`${BAND} px-6 pb-4 pt-6 sm:px-10`}>
+        <header className={`${LETTERHEAD} px-6 pb-5 pt-6 sm:px-10`}>
           <div className="flex items-center gap-5">
             {/* eslint-disable-next-line @next/next/no-img-element -- must be in
                 the document before window.print() fires, not lazy-loaded */}
             <img
-              src="/brand/mark-v2.png"
+              src="/brand/mark-cream.png"
               alt=""
-              width={64}
-              height={64}
-              className="h-14 w-14 shrink-0 sm:h-16 sm:w-16"
+              width={72}
+              height={72}
+              className="h-16 w-16 shrink-0 sm:h-[72px] sm:w-[72px]"
             />
-            <div className="min-w-0 flex-1 text-center">
-              <p className="font-display text-2xl font-bold leading-tight sm:text-[28px]">
-                DermaSoul Medical Aesthetics
+            <div className="flex min-w-0 flex-1 flex-col items-center text-center">
+              {/* The logo's own lettering, "DermaSoul" down to "by Dr. Nusrat Liza". */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- as above */}
+              <img
+                src="/brand/lettering-cream.png"
+                alt="DermaSoul Medical Aesthetics by Dr. Nusrat Liza"
+                width={1000}
+                height={351}
+                className="h-auto w-[260px] max-w-full sm:w-[300px]"
+              />
+              <p className="mt-3 text-[11px] font-semibold text-[#4a2f17]">{CLINIC_ADDRESS}</p>
+              <p className="text-[11px] font-semibold tabular-nums text-[#4a2f17]">
+                {CLINIC_PHONES.join("  ·  ")}
               </p>
-              <p className="mt-1 text-[11px] text-muted">{CLINIC_ADDRESS}</p>
-              <p className="text-[11px] tabular-nums text-muted">{CLINIC_PHONE}</p>
             </div>
-            {/* Balances the logo so the name sits on the sheet's centre line. */}
-            <div aria-hidden className="hidden w-16 shrink-0 sm:block print:block" />
+            {/* Balances the mark so the lettering sits on the sheet's centre line. */}
+            <div aria-hidden className="hidden w-[72px] shrink-0 sm:block print:block" />
           </div>
-          <p className="mt-4 text-center text-lg font-extrabold uppercase tracking-[0.08em] text-primary">
-            Payment Slip
-          </p>
         </header>
+        <p className="pt-5 text-center text-lg font-extrabold uppercase tracking-[0.08em] text-primary">
+          Payment Slip
+        </p>
 
         <div className="px-6 pb-10 pt-6 sm:px-10">
           <div className="grid grid-cols-2 gap-x-5 gap-y-3 sm:grid-cols-12 print:grid-cols-12">
-            <p className="col-span-2 text-[13px] italic text-muted sm:col-span-6 print:col-span-6">
+            <p className="col-span-2 text-[13px] text-muted sm:col-span-6 print:col-span-6">
               Patient Information:
             </p>
-            <label className="flex min-w-0 items-end gap-1.5 sm:col-span-3 print:col-span-3">
-              <span className="shrink-0 text-[13px] italic text-muted">Date:</span>
-              <input
-                type="date"
-                value={info.date}
-                readOnly={saved} onChange={setField("date")}
-                className={`${lineInput} print:hidden`}
-              />
-              {/* Paper gets plain text: a native date box prints its picker. */}
-              <span className={`${lineInput} hidden min-h-[1.6em] print:block`}>
-                {slipDate}
+            <div className="col-span-2 flex min-w-0 items-end gap-1.5 sm:col-span-6 print:col-span-6">
+              <span className="shrink-0 text-[13px] text-muted">Receipt No:</span>
+              <span className={`${lineInput} min-h-[1.6em] tabular-nums`}>
+                {receiptNo ?? <span className="no-print font-normal text-muted">Given when saved</span>}
               </span>
-            </label>
-            <LineField
-              label="Receipt No"
-              value={info.receiptNo}
-              readOnly={saved} onChange={setField("receiptNo")}
-              className="sm:col-span-3 print:col-span-3"
-            />
+            </div>
 
+            <LineField
+              label="Patient ID"
+              value={info.patientCode}
+              readOnly={saved} onChange={setField("patientCode")}
+              placeholder="DS-P-00001"
+              className="col-span-2 sm:col-span-4 print:col-span-4"
+            />
             <LineField
               label="Name"
               value={info.name}
               readOnly={saved} onChange={setField("name")}
-              className="col-span-2 sm:col-span-6 print:col-span-6"
+              className="col-span-2 sm:col-span-8 print:col-span-8"
             />
+
             <LineField
               label="Age"
               value={info.age}
@@ -291,19 +302,19 @@ export default function PaymentSlip() {
               <option value="Female" />
               <option value="Other" />
             </datalist>
-
-            <LineField
-              label="Address"
-              value={info.address}
-              readOnly={saved} onChange={setField("address")}
-              className="col-span-2 sm:col-span-6 print:col-span-6"
-            />
             <LineField
               label="Phone"
               type="tel"
               value={info.phone}
               readOnly={saved} onChange={setField("phone")}
               className="col-span-2 sm:col-span-6 print:col-span-6"
+            />
+
+            <LineField
+              label="Address"
+              value={info.address}
+              readOnly={saved} onChange={setField("address")}
+              className="col-span-2 sm:col-span-12 print:col-span-12"
             />
           </div>
 
@@ -317,8 +328,8 @@ export default function PaymentSlip() {
                     <br />
                     Service / medicine / products
                   </th>
-                  <th className={`${cellBorder} w-24 px-2 py-2`}>Cost</th>
-                  <th className={`${cellBorder} w-20 px-2 py-2`}>Quantity</th>
+                  <th className={`${cellBorder} w-14 px-1 py-2`}>Qty</th>
+                  <th className={`${cellBorder} w-32 px-2 py-2`}>Price</th>
                   <th className={`${cellBorder} w-28 px-2 py-2`}>Total</th>
                   <th className="no-print w-7" />
                 </tr>
@@ -345,10 +356,10 @@ export default function PaymentSlip() {
                           type="text"
                           inputMode="decimal"
                           autoComplete="off"
-                          value={row.cost}
-                          readOnly={saved} onChange={(e) => setCell(row.id, "cost", e.target.value)}
-                          aria-label={`Cost, row ${i + 1}`}
-                          className={`${cellInput} text-right tabular-nums`}
+                          value={row.qty}
+                          readOnly={saved} onChange={(e) => setCell(row.id, "qty", e.target.value)}
+                          aria-label={`Quantity, row ${i + 1}`}
+                          className={`${cellInput} text-center tabular-nums`}
                         />
                       </td>
                       <td className={`${cellBorder} align-top`}>
@@ -356,10 +367,10 @@ export default function PaymentSlip() {
                           type="text"
                           inputMode="decimal"
                           autoComplete="off"
-                          value={row.qty}
-                          readOnly={saved} onChange={(e) => setCell(row.id, "qty", e.target.value)}
-                          aria-label={`Quantity, row ${i + 1}`}
-                          className={`${cellInput} text-center tabular-nums`}
+                          value={row.cost}
+                          readOnly={saved} onChange={(e) => setCell(row.id, "cost", e.target.value)}
+                          aria-label={`Price, row ${i + 1}`}
+                          className={`${cellInput} text-right tabular-nums`}
                         />
                       </td>
                       <td className={`${cellBorder} px-2 py-1.5 text-right align-top font-semibold tabular-nums`}>
@@ -406,17 +417,29 @@ export default function PaymentSlip() {
           </button>
 
           <div className="mt-5 flex items-end gap-1.5 break-inside-avoid">
-            <span className="shrink-0 text-[13px] italic text-muted">Amount (in word):</span>
+            <span className="shrink-0 text-[13px] text-muted">Amount (in word):</span>
             <span className="min-h-[1.6em] flex-1 border-b border-dotted border-fg/50 px-1 py-0.5 text-[13.5px] font-semibold">
               {amountInWords(grandTotal)}
             </span>
           </div>
 
-          <div className="mt-20 break-inside-avoid">
+          <div className="mt-20 flex items-end justify-between gap-6 break-inside-avoid">
             {/* Left blank on purpose: signed by hand once the slip is printed. */}
-            <div className="w-52 border-t border-fg/60 pt-1 text-center text-xs italic text-muted">
+            <div className="w-52 border-t border-fg/60 pt-1 text-center text-xs text-muted">
               Authorised signature
             </div>
+            <label className="flex w-56 min-w-0 items-end gap-1.5">
+              <span className="shrink-0 text-[13px] text-muted">Date:</span>
+              <input
+                type="date"
+                value={info.date}
+                readOnly={saved}
+                onChange={setField("date")}
+                className={`${lineInput} print:hidden`}
+              />
+              {/* Paper gets plain text: a native date box prints its picker. */}
+              <span className={`${lineInput} hidden min-h-[1.6em] print:block`}>{slipDate}</span>
+            </label>
           </div>
         </div>
       </article>
