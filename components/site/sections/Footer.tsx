@@ -2,9 +2,18 @@
 
 import Image from "next/image";
 import { motion } from "motion/react";
-import { brand, footer, instagramChatUrl } from "@/lib/site/content";
+import { brand, footer, instagramChatUrl, whatsappUrl } from "@/lib/site/content";
 import type { SiteSocialLink, SocialNetwork } from "@/lib/site/data";
-import { Facebook, Instagram, LinkedIn, TikTok, XLogo, YouTube } from "@/components/site/Icons";
+import {
+  Facebook,
+  Instagram,
+  InstagramDirect,
+  LinkedIn,
+  TikTok,
+  WhatsApp,
+  XLogo,
+  YouTube,
+} from "@/components/site/Icons";
 
 const NETWORK_ICON: Record<SocialNetwork, typeof Instagram> = {
   facebook: Facebook,
@@ -14,9 +23,6 @@ const NETWORK_ICON: Record<SocialNetwork, typeof Instagram> = {
   linkedin: LinkedIn,
   youtube: YouTube,
 };
-
-/** All gold, as in the header; "Soul" takes the italic, echoing the script in the logo. */
-const WORD = ["Derma", "Soul"];
 
 /** `social`: the profiles the owner set under Social media; each shows as an icon. */
 export default function Footer({ social = [] }: { social?: SiteSocialLink[] }) {
@@ -55,9 +61,11 @@ export default function Footer({ social = [] }: { social?: SiteSocialLink[] }) {
           </div>
           <div>
             <h4>Visit</h4>
-            {brand.addressLines.map((l) => (
-              <p key={l}>{l}</p>
-            ))}
+            <a href={brand.mapUrl} target="_blank" rel="noopener noreferrer" className="foot-visit">
+              {brand.addressLines.map((l) => (
+                <span key={l}>{l}</span>
+              ))}
+            </a>
           </div>
           <div>
             <h4>Hours</h4>
@@ -67,31 +75,26 @@ export default function Footer({ social = [] }: { social?: SiteSocialLink[] }) {
           </div>
           <div>
             <h4>Contact</h4>
-            <a href={`mailto:${brand.email}`} className="roll">
-              <span data-text={brand.email}>{brand.email}</span>
-            </a>
+            <a href={`mailto:${brand.email}`}>{brand.email}</a>
             {brand.phones.map((phone) => (
-              <a key={phone} href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="roll">
-                <span data-text={phone}>{phone}</span>
+              <a key={phone} href={`tel:${phone.replace(/[^\d+]/g, "")}`}>
+                {phone}
               </a>
             ))}
           </div>
         </div>
       </div>
 
+      {/* The logo's own lettering, so the "S" of Soul is the logo's script S. */}
       <div className="foot-giant" aria-hidden>
-        {WORD.flatMap((part, w) => part.split("").map((ch) => ({ ch, soul: w === 1 }))).map(({ ch, soul }, i) => (
-          <motion.span
-            key={i}
-            className={soul ? "soul" : ""}
-            initial={{ y: "100%" }}
-            whileInView={{ y: "0%" }}
-            viewport={{ once: true, margin: "0px 0px -5% 0px" }}
-            transition={{ duration: 1.2, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {ch}
-          </motion.span>
-        ))}
+        <motion.div
+          initial={{ y: "100%" }}
+          whileInView={{ y: "0%" }}
+          viewport={{ once: true, margin: "0px 0px -5% 0px" }}
+          transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Image src="/brand/wordmark-name.png" alt="" width={900} height={199} sizes="96vw" />
+        </motion.div>
       </div>
 
       <div className="wrap foot-bottom">
@@ -102,25 +105,44 @@ export default function Footer({ social = [] }: { social?: SiteSocialLink[] }) {
 }
 
 /**
- * The floating Instagram button, bottom right on every page of the website.
- * It opens a chat with the clinic's Instagram profile (`profileUrl`).
+ * The floating buttons, bottom right on every page of the website: WhatsApp
+ * (a chat with the clinic's first number) above Instagram, which opens a
+ * Direct message to the clinic's profile (`profileUrl`) and shows the Direct
+ * icon under the Instagram one so it reads as "message us".
  */
 export function FabInstagram({ profileUrl }: { profileUrl: string }) {
   const href = instagramChatUrl(profileUrl) ?? profileUrl;
+  const pop = (delay: number) => ({
+    initial: { scale: 0 },
+    animate: { scale: 1 },
+    transition: { delay, type: "spring" as const, stiffness: 260, damping: 18 },
+    whileHover: { scale: 1.08 },
+  });
   return (
-    <motion.a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="fab-ig"
-      aria-label="Message us on Instagram"
-      title="Message us on Instagram"
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
-      transition={{ delay: 3.4, type: "spring", stiffness: 260, damping: 18 }}
-      whileHover={{ scale: 1.08 }}
-    >
-      <Instagram width={24} />
-    </motion.a>
+    <div className="fab-stack">
+      <motion.a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fab fab-wa"
+        aria-label="Message us on WhatsApp"
+        title="Message us on WhatsApp"
+        {...pop(3.3)}
+      >
+        <WhatsApp width={26} />
+      </motion.a>
+      <motion.a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fab fab-ig"
+        aria-label="Message us on Instagram"
+        title="Message us on Instagram"
+        {...pop(3.4)}
+      >
+        <Instagram width={22} />
+        <InstagramDirect width={16} />
+      </motion.a>
+    </div>
   );
 }

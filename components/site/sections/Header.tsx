@@ -63,8 +63,8 @@ export default function Header({
         <div className="hdr-actions">
           <nav className="hdr-links" aria-label="Primary">
             {nav.map((l) => (
-              <a key={l.href} href={l.href} className="roll">
-                <span data-text={l.label}>{l.label}</span>
+              <a key={l.href} href={l.href}>
+                {l.label}
               </a>
             ))}
           </nav>

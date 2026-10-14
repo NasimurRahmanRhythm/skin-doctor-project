@@ -32,7 +32,7 @@ export default function Visit() {
     <section className="visit dark" ref={root}>
       <div className="wrap visit-grid">
         <div className="visit-copy">
-          <span className="kicker">Visit the studio</span>
+          <span className="kicker">Visit the clinic</span>
           <SplitReveal as="h2" className="display">
             {brand.address[0]}, <em>{brand.address[1]}</em>
           </SplitReveal>

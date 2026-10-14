@@ -6,7 +6,7 @@ import { gsap, useGSAP, prefersReducedMotion } from "@/lib/site/gsap";
 import { Sprig } from "@/components/site/Icons";
 
 /**
- * The brand stamp: the studio's one-line promise, read word by word as the
+ * The brand stamp: the clinic's one-line promise, read word by word as the
  * scroll passes over it. ("As seen in" now has its own section, after the
  * treatments.)
  */

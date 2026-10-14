@@ -17,7 +17,7 @@ const roboto = Roboto({
 export const metadata: Metadata = {
   title: "DermaSoul Medical Aesthetics — by Dr. Nusrat Liza",
   description:
-    "A boutique dermatology studio blending clinical treatments with an unhurried, personal experience — for skin that changes with you.",
+    "A boutique dermatology clinic blending clinical treatments with an unhurried, personal experience — for skin that changes with you.",
 };
 
 export const viewport: Viewport = {

@@ -60,6 +60,9 @@ export function instagramChatUrl(profileUrl: string): string | null {
   return name ? `https://ig.me/m/${encodeURIComponent(name)}` : null;
 }
 
+/** A WhatsApp chat with the clinic's first number, e.g. 01341-333344 → wa.me/8801341333344. */
+export const whatsappUrl = `https://wa.me/880${CLINIC_PHONES[0].replace(/\D/g, "").replace(/^0/, "")}`;
+
 /** The Google Maps embed for brand.mapQuery; needs no API key. */
 export const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(brand.mapQuery)}&z=16&output=embed`;
 
@@ -79,7 +82,6 @@ export const nav: { label: string; href: string; optional?: OptionalSection }[] 
   { label: "Our Team", href: "/#team", optional: "team" },
   { label: "Packages", href: "/#packages", optional: "packages" },
   { label: "Results", href: "/#results" },
-  { label: "Reviews", href: "/#reviews" },
   { label: "About", href: "/#about" },
 ];
 
@@ -88,7 +90,7 @@ export const hero = {
   title: ["Care that meets", "your skin"],
   accent: "where it is.",
   lede:
-    "DermaSoul Medical Aesthetics is a boutique dermatology studio blending clinical treatments with an unhurried, personal experience — for skin that changes with you.",
+    "DermaSoul Medical Aesthetics is a boutique dermatology clinic blending clinical treatments with an unhurried, personal experience — for skin that changes with you.",
 };
 
 export const treatmentsIntro = {
@@ -233,6 +235,6 @@ export const inquiry = {
 };
 
 export const footer = {
-  blurb: "A boutique skin & body studio focused on unhurried, personal care.",
-  legal: "© 2026 DermaSoul Medical Aesthetics. Demo template — placeholder content.",
+  blurb: "A boutique skin & body clinic focused on unhurried, personal care.",
+  legal: "© 2026 DermaSoul Medical Aesthetics",
 };
