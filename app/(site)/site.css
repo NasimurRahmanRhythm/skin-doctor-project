@@ -815,11 +815,12 @@ html.has-cursor .site-modal button {
 .hero-title {
   font-family: var(--serif);
   font-weight: 300;
-  font-size: clamp(3.2rem, 9.2vw, 10rem);
+  /* Small enough that "your skin where it is." stays on one line. */
+  font-size: clamp(2.6rem, 7vw, 8rem);
   line-height: 0.92;
   letter-spacing: -0.045em;
   font-variation-settings: "opsz" 144;
-  max-width: 14ch;
+  max-width: 22ch;
 }
 .hero-title em {
   color: var(--gold-soft);
