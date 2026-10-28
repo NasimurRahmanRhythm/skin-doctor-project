@@ -1822,6 +1822,14 @@ html.has-cursor .site-modal button {
   mix-blend-mode: soft-light;
   pointer-events: none;
 }
+/* A long name or designation wraps inside its own column, never into the next. */
+.member {
+  min-width: 0;
+}
+.member-name,
+.member-role {
+  overflow-wrap: anywhere;
+}
 .member-name {
   margin-top: 22px;
   font-family: var(--serif);
@@ -2355,6 +2363,9 @@ img.rev-avatar {
   padding: 16px 0;
   border-bottom: 1px solid var(--line-dark);
   font-size: 0.95rem;
+}
+.inquiry-phones a {
+  display: block;
 }
 .inquiry-info li span {
   min-width: 64px;
@@ -2980,6 +2991,10 @@ html.modal-open {
   }
   .team-grid {
     gap: 14px;
+  }
+  .member-role {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
   }
   .fab-stack {
     right: 16px;

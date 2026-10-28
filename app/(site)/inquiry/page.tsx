@@ -38,12 +38,14 @@ export default async function InquiryPage({ searchParams }: PageProps<"/inquiry"
                 </li>
                 <li>
                   <span>Phone</span>
-                  {brand.phones.map((phone, i) => (
-                    <span key={phone}>
-                      {i > 0 && ", "}
-                      <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>{phone}</a>
-                    </span>
-                  ))}
+                  {/* One number under the other. */}
+                  <div className="inquiry-phones">
+                    {brand.phones.map((phone) => (
+                      <a key={phone} href={`tel:${phone.replace(/[^\d+]/g, "")}`}>
+                        {phone}
+                      </a>
+                    ))}
+                  </div>
                 </li>
               </ul>
             </div>

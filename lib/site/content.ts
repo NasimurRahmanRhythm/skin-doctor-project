@@ -25,7 +25,7 @@ export const brand = {
   addressLines: ["Level-9, BTI Armitage", "House 77, Road 12", "Banani, Dhaka 1213"],
   /** Just the area, then the city: the headline, and where one short line fits. */
   address: ["Banani", "Dhaka"],
-  hours: ["Open every day", "11:30 am – 8:00 pm"],
+  hours: ["Open every day", "11:30 am – 8:30 pm"],
   /** The clinic's Google Maps share link; "Get directions" opens it. */
   mapUrl: "https://maps.app.goo.gl/5K9tGMrZsKLmS5499",
   /**

@@ -52,7 +52,8 @@ function Member({ m, i }: { m: SiteDoctor; i: number }) {
         <span className="member-glare" />
       </motion.div>
       <h3 className="member-name">{m.name}</h3>
-      {m.designation && <p className="member-role">{m.designation}</p>}
+      {/* "MBBS(DU),CMU" → "MBBS(DU), CMU", so the line can break after a comma. */}
+      {m.designation && <p className="member-role">{m.designation.replace(/,(?=\S)/g, ", ")}</p>}
     </Reveal>
   );
 }
