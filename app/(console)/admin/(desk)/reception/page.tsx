@@ -23,12 +23,20 @@ export default async function ReceptionPage({
 
   // Reception can read every visit now, so the list is narrowed to this
   // receptionist's own check-ins, and to today so it stays short at a busy desk.
-  const { data: doctors } = await supabase
-    .from("staff_directory")
-    .select("id, full_name, specialty")
-    .eq("role", "doctor")
-    .eq("is_active", true)
-    .order("full_name");
+  type Doctor = { id: string; full_name: string; specialty: string | null; visit_fee?: number | null };
+  const readDoctors = (columns: string) =>
+    supabase
+      .from("staff_directory")
+      .select(columns)
+      .eq("role", "doctor")
+      .eq("is_active", true)
+      .order("full_name")
+      .overrideTypes<Doctor[], { merge: false }>();
+  // Until migration 20261031000025 adds visit_fee, list the doctors without it.
+  const withFee = await readDoctors("id, full_name, specialty, visit_fee");
+  const { data: doctors } = withFee.error
+    ? await readDoctors("id, full_name, specialty")
+    : withFee;
 
   const { data: todays } = await supabase
     .from("visits")

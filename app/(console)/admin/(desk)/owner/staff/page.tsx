@@ -15,7 +15,12 @@ import { requireRole, ROLE_LABEL, type AppRole } from "@/lib/auth";
 import { clinicDayRange } from "@/lib/clinic";
 import { publicImageUrl } from "@/lib/site-media";
 import { createClient } from "@/lib/supabase/server";
-import { setStaffActive, setStaffDesignation, setStaffOnWebsite } from "../actions";
+import {
+  setStaffActive,
+  setStaffDesignation,
+  setStaffOnWebsite,
+  setStaffVisitFee,
+} from "../actions";
 import AddStaffForm from "./add-staff-form";
 import DesignationsCard from "./designations-card";
 import StaffPhotoForm from "./staff-photo-form";
@@ -60,14 +65,12 @@ export default async function StaffPage() {
   const { start } = clinicDayRange();
 
   // The owner policy on public.staff is what makes the full rows readable here.
-  const [{ data: team }, { data: todayVisits }, { data: designationRows }] = await Promise.all([
-    supabase
-      .from("staff")
-      .select(
-        "id, email, full_name, role, specialty, is_active, created_at, photo_path, show_on_website",
-      )
-      .order("role")
-      .order("full_name"),
+  const staffColumns =
+    "id, email, full_name, role, specialty, is_active, created_at, photo_path, show_on_website";
+  const readTeam = (columns: string) =>
+    supabase.from("staff").select(columns).order("role").order("full_name");
+  const [teamResult, { data: todayVisits }, { data: designationRows }] = await Promise.all([
+    readTeam(`${staffColumns}, visit_fee`),
     supabase
       .from("visits")
       .select("receptionist_id, nurse_id, doctor_id")
@@ -75,6 +78,24 @@ export default async function StaffPage() {
     supabase.from("designations").select("id, name").order("name"),
   ]);
   const designations = designationRows ?? [];
+
+  type Member = {
+    id: string;
+    email: string;
+    full_name: string;
+    role: string;
+    specialty: string | null;
+    is_active: boolean;
+    photo_path: string | null;
+    show_on_website: boolean;
+    visit_fee?: number | null;
+  };
+  // Until migration 20261031000025 adds visit_fee, read the team without it.
+  let team = teamResult.data as unknown as Member[] | null;
+  const hasVisitFee = !teamResult.error;
+  if (teamResult.error) {
+    team = (await readTeam(staffColumns)).data as unknown as Member[] | null;
+  }
 
   // How many patients each person has touched today — the reason the owner
   // opens this page is usually to see who is carrying the load.
@@ -200,6 +221,30 @@ export default async function StaffPage() {
                         s.specialty
                       )}
                     </span>
+                    {s.role === "doctor" && hasVisitFee && (
+                      <form
+                        action={setStaffVisitFee}
+                        className="mt-1 flex items-center gap-1 pl-8 text-xs text-muted"
+                      >
+                        <input type="hidden" name="staff_id" value={s.id} />
+                        <label htmlFor={`fee-${s.id}`}>Visit price ৳</label>
+                        <input
+                          id={`fee-${s.id}`}
+                          name="visit_fee"
+                          inputMode="numeric"
+                          pattern="[0-9,]*"
+                          defaultValue={s.visit_fee ?? ""}
+                          placeholder="—"
+                          className="w-20 rounded-md border border-hairline bg-transparent px-1.5 py-0.5 text-xs text-fg focus:border-primary focus:outline-none"
+                        />
+                        <button
+                          type="submit"
+                          className="text-[11px] font-bold text-primary underline-offset-2 hover:underline"
+                        >
+                          Save
+                        </button>
+                      </form>
+                    )}
                   </td>
                   <td className={tdCell}>
                     <RolePill role={s.role} />

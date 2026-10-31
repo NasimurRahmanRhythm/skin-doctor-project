@@ -105,6 +105,24 @@ export default function AddStaffForm({ designations }: { designations: string[] 
             )}
           </div>
         )}
+        {role === "doctor" && (
+          <div>
+            <label htmlFor="visit_fee" className={label}>
+              Visit price (৳)
+            </label>
+            <input
+              id="visit_fee"
+              name="visit_fee"
+              inputMode="numeric"
+              pattern="[0-9,]*"
+              placeholder="1000"
+              className={field}
+            />
+            <p className="mt-1.5 text-xs text-muted">
+              Reception sees it beside the doctor&rsquo;s name at check-in.
+            </p>
+          </div>
+        )}
         <div className="sm:col-span-2">
           <ImageInput name="photo" label="Profile photo" round />
         </div>

@@ -14,7 +14,20 @@ const staffSchema = z.object({
   full_name: z.string().trim().min(1, "Enter their name."),
   role: z.enum(["owner", "receptionist", "nurse", "doctor"]),
   specialty: z.string().trim().optional(),
+  visit_fee: z.string().trim().optional(),
 });
+
+/** A doctor's visit price: whole taka, or blank for none. */
+const visitFee = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/[,\s৳]/g, ""))
+  .refine((v) => v === "" || /^\d{1,7}$/.test(v), "Enter the visit price in taka, e.g. 1000.")
+  .transform((v) => (v === "" ? null : Number(v)))
+  .refine((v) => v === null || v <= 1_000_000, "That visit price is too high.");
+
+/** Before migration 20261031000025 adds staff.visit_fee, saves leave it out. */
+const missingVisitFee = (e: { message: string } | null) => !!e && /visit_fee/i.test(e.message);
 
 /** The staff list and the website's Team section and page all read staff rows. */
 function revalidateStaff() {
@@ -44,11 +57,15 @@ export async function addStaff(
     // The designation select only renders for doctors; for every other role
     // FormData returns null, which .optional() rejects.
     specialty: formData.get("specialty") ?? undefined,
+    visit_fee: formData.get("visit_fee") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Check the form." };
   }
   const input = parsed.data;
+
+  const fee = visitFee.safeParse(input.role === "doctor" ? (input.visit_fee ?? "") : "");
+  if (!fee.success) return { error: fee.error.issues[0]?.message };
 
   const photo = formImage(formData, "photo");
   if (photo) {
@@ -94,13 +111,19 @@ export async function addStaff(
     return { error: authError?.message ?? "Could not create the account." };
   }
 
-  const { error: rowError } = await admin.from("staff").insert({
+  const row: Record<string, unknown> = {
     id: created.user.id,
     email: input.email,
     full_name: input.full_name,
     role: input.role,
     specialty: input.role === "doctor" ? input.specialty || null : null,
-  });
+  };
+  if (fee.data !== null) row.visit_fee = fee.data;
+  let { error: rowError } = await admin.from("staff").insert(row);
+  if (missingVisitFee(rowError)) {
+    delete row.visit_fee;
+    ({ error: rowError } = await admin.from("staff").insert(row));
+  }
 
   if (rowError) {
     // Do not leave an auth user with no staff row: they would be able to
@@ -221,6 +244,26 @@ export async function setStaffDesignation(formData: FormData) {
     .eq("role", "doctor");
 
   revalidateStaff();
+}
+
+/** Changes a doctor's visit price; blank clears it. */
+export async function setStaffVisitFee(formData: FormData) {
+  await requireRole("owner");
+
+  const staffId = String(formData.get("staff_id") ?? "");
+  if (!z.uuid().safeParse(staffId).success) return;
+  const fee = visitFee.safeParse(String(formData.get("visit_fee") ?? ""));
+  if (!fee.success) return;
+
+  const admin = createAdminClient();
+  await admin
+    .from("staff")
+    .update({ visit_fee: fee.data })
+    .eq("id", staffId)
+    .eq("role", "doctor");
+
+  revalidateStaff();
+  revalidatePath("/admin/reception");
 }
 
 // ---------------------------------------------------------- designations --

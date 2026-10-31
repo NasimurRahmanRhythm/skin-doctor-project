@@ -107,7 +107,14 @@ function PatientOption({
   );
 }
 
-type Doctor = { id: string; full_name: string; specialty: string | null };
+type Doctor = {
+  id: string;
+  full_name: string;
+  specialty: string | null;
+  visit_fee?: number | null;
+};
+
+const visitPrice = (fee: number) => `৳ ${fee.toLocaleString("en-IN")}`;
 
 export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
   const [state, action] = useActionState<CheckInState, FormData>(checkIn, {});
@@ -467,7 +474,6 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
             id="date_of_birth"
             name="date_of_birth"
             type="date"
-            required
             min="1890-01-02"
             max={clinicToday()}
             readOnly={Boolean(patient?.date_of_birth)}
@@ -479,7 +485,7 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
 
         <div>
           <label htmlFor="email" className={label}>
-            Email <span className="text-muted">(optional)</span>
+            Email
           </label>
           <input
             id="email"
@@ -602,6 +608,7 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
               <option key={d.id} value={d.id}>
                 {d.full_name}
                 {d.specialty ? ` — ${d.specialty}` : ""}
+                {d.visit_fee != null ? ` — Visit ${visitPrice(d.visit_fee)}` : ""}
               </option>
             ))}
           </select>

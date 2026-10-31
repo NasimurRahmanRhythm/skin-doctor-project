@@ -93,13 +93,16 @@ const optionalText = z
 const checkInSchema = z.object({
   full_name: z.string().trim().min(1, "Enter the patient name."),
   phone: z.string().trim().min(6, "Enter a phone number."),
-  date_of_birth: z
-    .string()
-    .trim()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the date of birth.")
-    .refine((v) => v > "1890-01-01" && v <= clinicToday(), {
-      message: "Enter a valid date of birth.",
-    }),
+  // Optional: blank means not given.
+  date_of_birth: optionalText.pipe(
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date of birth.")
+      .refine((v) => v > "1890-01-01" && v <= clinicToday(), {
+        message: "Enter a valid date of birth.",
+      })
+      .nullable(),
+  ),
   address: optionalText,
   email: optionalText.pipe(
     z.email("Enter a valid email address, or leave it blank.").nullable(),
@@ -258,7 +261,7 @@ export async function checkIn(
     // checked in before DOB and email were asked — but never overwrite what
     // is already on file from a single desk entry.
     const fill: Record<string, string> = {};
-    if (!existing.date_of_birth) fill.date_of_birth = input.date_of_birth;
+    if (!existing.date_of_birth && input.date_of_birth) fill.date_of_birth = input.date_of_birth;
     if (!existing.email && input.email) fill.email = input.email;
     if (!existing.address && input.address) fill.address = input.address;
     if (Object.keys(fill).length > 0) {
