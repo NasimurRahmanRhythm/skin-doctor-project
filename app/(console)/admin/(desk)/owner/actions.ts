@@ -246,6 +246,42 @@ export async function setStaffDesignation(formData: FormData) {
   revalidateStaff();
 }
 
+/**
+ * Moves a doctor one place up or down in the website's order. The list is the
+ * doctors the website shows, in their current order; it is renumbered 1, 2, 3…
+ * as it goes, so it stays contiguous whoever was added or hidden since.
+ */
+export async function moveDoctor(formData: FormData) {
+  await requireRole("owner");
+
+  const staffId = String(formData.get("staff_id") ?? "");
+  if (!z.uuid().safeParse(staffId).success) return;
+  const by = formData.get("dir") === "up" ? -1 : 1;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("staff")
+    .select("id")
+    .eq("role", "doctor")
+    .eq("is_active", true)
+    .eq("show_on_website", true)
+    .order("website_order", { nullsFirst: false })
+    .order("created_at");
+  if (error || !data) return;
+
+  const ids = data.map((r) => r.id as string);
+  const i = ids.indexOf(staffId);
+  const j = i + by;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+
+  await Promise.all(
+    ids.map((id, n) => admin.from("staff").update({ website_order: n + 1 }).eq("id", id)),
+  );
+
+  revalidateStaff();
+}
+
 /** Changes a doctor's visit price; blank clears it. */
 export async function setStaffVisitFee(formData: FormData) {
   await requireRole("owner");

@@ -16,6 +16,7 @@ import { clinicDayRange } from "@/lib/clinic";
 import { publicImageUrl } from "@/lib/site-media";
 import { createClient } from "@/lib/supabase/server";
 import {
+  moveDoctor,
   setStaffActive,
   setStaffDesignation,
   setStaffOnWebsite,
@@ -69,13 +70,15 @@ export default async function StaffPage() {
     "id, email, full_name, role, specialty, is_active, created_at, photo_path, show_on_website";
   const readTeam = (columns: string) =>
     supabase.from("staff").select(columns).order("role").order("full_name");
-  const [teamResult, { data: todayVisits }, { data: designationRows }] = await Promise.all([
+  const [teamResult, { data: todayVisits }, { data: designationRows }, orderResult] = await Promise.all([
     readTeam(`${staffColumns}, visit_fee`),
     supabase
       .from("visits")
       .select("receptionist_id, nurse_id, doctor_id")
       .gte("created_at", start),
     supabase.from("designations").select("id, name").order("name"),
+    // Errors until migration 20261101000026 adds website_order.
+    supabase.from("staff").select("id, website_order").eq("role", "doctor"),
   ]);
   const designations = designationRows ?? [];
 
@@ -89,6 +92,7 @@ export default async function StaffPage() {
     photo_path: string | null;
     show_on_website: boolean;
     visit_fee?: number | null;
+    created_at: string;
   };
   // Until migration 20261031000025 adds visit_fee, read the team without it.
   let team = teamResult.data as unknown as Member[] | null;
@@ -105,6 +109,19 @@ export default async function StaffPage() {
       if (id) handled.set(id, (handled.get(id) ?? 0) + 1);
     }
   }
+
+  // The doctors the website shows, in the order it shows them: the first four
+  // are the landing page's Our Team.
+  const orderOf = new Map(
+    (orderResult.data ?? []).map((r) => [r.id as string, r.website_order as number | null]),
+  );
+  const onWebsite = (team ?? [])
+    .filter((s) => s.role === "doctor" && s.is_active && s.show_on_website)
+    .sort(
+      (a, b) =>
+        (orderOf.get(a.id) ?? Infinity) - (orderOf.get(b.id) ?? Infinity) ||
+        a.created_at.localeCompare(b.created_at),
+    );
 
   const active = (team ?? []).filter((s) => s.is_active);
   const inactive = (team ?? []).filter((s) => !s.is_active);
@@ -316,6 +333,57 @@ export default async function StaffPage() {
         <p className="mt-5 text-xs text-muted">
           A deactivated doctor also stops receiving new patients.
         </p>
+      </section>
+
+      <section className={`${card} ${cardPad}`}>
+        <SectionHead
+          title="Doctors on the website"
+          hint="Move a doctor up or down to set the order. The top 4 show on the landing page; the All doctors page lists everyone in this order. Show or hide a doctor in the Website column above."
+        />
+        {orderResult.error ? (
+          <p className="mt-5 rounded-control border border-dashed border-hairline px-3 py-2.5 text-sm text-muted">
+            Run the doctor-order migration (20261101000026) in Supabase to set the order.
+          </p>
+        ) : onWebsite.length === 0 ? (
+          <p className="mt-5 text-sm text-muted">No doctor is shown on the website yet.</p>
+        ) : (
+          <ol className="mt-5 divide-y divide-hairline rounded-control border border-hairline">
+            {onWebsite.map((s, i) => (
+              <li key={s.id} className="flex items-center gap-3 px-3.5 py-2.5">
+                <span className="w-6 text-sm font-bold tabular text-muted">{i + 1}.</span>
+                <span className="min-w-0 flex-1">
+                  <Person
+                    name={s.full_name}
+                    photoUrl={publicImageUrl("staff-photos", s.photo_path)}
+                    role="doctor"
+                  />
+                </span>
+                {i < 4 && (
+                  <span className="rounded-full border border-ok/40 bg-ok/10 px-2.5 py-1 text-[11px] font-bold text-ok">
+                    Landing page
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  {(["up", "down"] as const).map((dir) => (
+                    <form key={dir} action={moveDoctor}>
+                      <input type="hidden" name="staff_id" value={s.id} />
+                      <input type="hidden" name="dir" value={dir} />
+                      <button
+                        type="submit"
+                        disabled={dir === "up" ? i === 0 : i === onWebsite.length - 1}
+                        aria-label={`Move ${s.full_name} ${dir}`}
+                        title={dir === "up" ? "Move up" : "Move down"}
+                        className="grid h-7 w-7 place-items-center rounded-full text-muted transition-ui hover:bg-subtle hover:text-fg disabled:opacity-30"
+                      >
+                        {dir === "up" ? "↑" : "↓"}
+                      </button>
+                    </form>
+                  ))}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
       </section>
 
       <DesignationsCard designations={designations} />

@@ -245,13 +245,23 @@ export type SiteDoctor = {
   photo: string | null;
 };
 
+/**
+ * The doctors in the owner's order (the staff page's ↑/↓): the landing page
+ * takes the first four, /team all of them.
+ */
 export async function getDoctors(limit?: number): Promise<SiteDoctor[]> {
-  const data = await rows<{
-    id: string;
-    full_name: string;
-    specialty: string | null;
-    photo_path: string | null;
-  }>("website_doctors", "id, full_name, specialty, photo_path", { order: "created", limit });
+  type Row = { id: string; full_name: string; specialty: string | null; photo_path: string | null };
+  const columns = "id, full_name, specialty, photo_path";
+  // Until migration 20261101000026 gives the view a sort_order, oldest first.
+  const hasOrder = await anon()
+    .from("website_doctors")
+    .select("sort_order")
+    .limit(1)
+    .then(({ error }) => !error, () => false);
+  const data = await rows<Row>("website_doctors", columns, {
+    order: hasOrder ? "sort" : "created",
+    limit,
+  });
   return data.map((d) => ({
     id: d.id,
     name: d.full_name,
