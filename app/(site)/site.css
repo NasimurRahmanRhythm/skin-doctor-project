@@ -754,6 +754,16 @@ html.has-cursor .site-modal button {
   transform: rotate(-8deg) scale(1.05);
 }
 
+/*
+ * Phones and iPads (portrait and landscape) have no empty margins for the seal
+ * to roam into: wherever it rests it lands on text. It only shows from 1200px.
+ */
+@media (max-width: 1199px) {
+  .roam {
+    display: none;
+  }
+}
+
 /* Invisible targets the seal drifts toward — zero-size points inside each section. */
 .roam-anchor {
   position: absolute;
@@ -2853,9 +2863,6 @@ html.modal-open {
   }
   .tdetail-acc-body {
     padding-left: 0;
-  }
-  .roam {
-    width: 84px;
   }
   .sec-head.split,
   .visit-grid,

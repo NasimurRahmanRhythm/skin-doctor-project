@@ -66,26 +66,20 @@ export default function RoamingBadge() {
     let lastScroll = window.scrollY;
 
     const tick = (_t: number, delta: number) => {
+      // Hidden by CSS below 1200px (phones, iPads): nothing to move.
+      if (!el.offsetWidth) return;
       const dt = Math.min(delta, 50) / 16.67;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       const size = el.offsetWidth;
       const margin = size * 0.5 + 12;
 
-      // Single-column layouts have no empty margins to roam into, so on narrow
-      // screens the seal rests in the bottom-left corner and only spins.
-      const compact = vw < 900;
-      if (compact || active) {
-        let tx = margin - 4;
-        let ty = vh - margin + 4;
-        let ts = 1;
-        if (!compact && active) {
-          const r = active.getBoundingClientRect();
-          tx = gsap.utils.clamp(margin, vw - margin, r.left + r.width / 2);
-          // Top keeps clear of the header, bottom of the Instagram button.
-          ty = gsap.utils.clamp(margin + 60, vh - margin - 84, r.top + r.height / 2);
-          ts = parseFloat(active.dataset.roamScale ?? "1");
-        }
+      if (active) {
+        const r = active.getBoundingClientRect();
+        const tx = gsap.utils.clamp(margin, vw - margin, r.left + r.width / 2);
+        // Top keeps clear of the header, bottom of the Instagram button.
+        const ty = gsap.utils.clamp(margin + 60, vh - margin - 84, r.top + r.height / 2);
+        const ts = parseFloat(active.dataset.roamScale ?? "1");
         const ease = reduced ? 1 : 1 - Math.pow(1 - 0.075, dt);
         x += (tx - x) * ease;
         y += (ty - y) * ease;
