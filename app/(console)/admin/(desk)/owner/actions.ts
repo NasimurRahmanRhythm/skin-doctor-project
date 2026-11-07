@@ -15,6 +15,7 @@ const staffSchema = z.object({
   role: z.enum(["owner", "receptionist", "nurse", "doctor"]),
   specialty: z.string().trim().optional(),
   visit_fee: z.string().trim().optional(),
+  tag: z.string().trim().max(80, "Keep the tag under 80 characters.").optional(),
 });
 
 /** A doctor's visit price: whole taka, or blank for none. */
@@ -28,6 +29,8 @@ const visitFee = z
 
 /** Before migration 20261031000025 adds staff.visit_fee, saves leave it out. */
 const missingVisitFee = (e: { message: string } | null) => !!e && /visit_fee/i.test(e.message);
+/** Before migration 20261107000027 adds staff.tag, saves leave it out. */
+const missingTag = (e: { message: string } | null) => !!e && /\btag\b/i.test(e.message);
 
 /** The staff list and the website's Team section and page all read staff rows. */
 function revalidateStaff() {
@@ -58,6 +61,7 @@ export async function addStaff(
     // FormData returns null, which .optional() rejects.
     specialty: formData.get("specialty") ?? undefined,
     visit_fee: formData.get("visit_fee") ?? undefined,
+    tag: formData.get("tag") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Check the form." };
@@ -119,9 +123,12 @@ export async function addStaff(
     specialty: input.role === "doctor" ? input.specialty || null : null,
   };
   if (fee.data !== null) row.visit_fee = fee.data;
+  if (input.role === "doctor" && input.tag) row.tag = input.tag;
   let { error: rowError } = await admin.from("staff").insert(row);
-  if (missingVisitFee(rowError)) {
-    delete row.visit_fee;
+  for (let tries = 0; tries < 2 && rowError; tries++) {
+    if (missingVisitFee(rowError) && "visit_fee" in row) delete row.visit_fee;
+    else if (missingTag(rowError) && "tag" in row) delete row.tag;
+    else break;
     ({ error: rowError } = await admin.from("staff").insert(row));
   }
 
@@ -278,6 +285,20 @@ export async function moveDoctor(formData: FormData) {
   await Promise.all(
     ids.map((id, n) => admin.from("staff").update({ website_order: n + 1 }).eq("id", id)),
   );
+
+  revalidateStaff();
+}
+
+/** Changes a doctor's tag, the line under their name on the website; blank clears it. */
+export async function setStaffTag(formData: FormData) {
+  await requireRole("owner");
+
+  const staffId = String(formData.get("staff_id") ?? "");
+  if (!z.uuid().safeParse(staffId).success) return;
+  const tag = String(formData.get("tag") ?? "").trim().slice(0, 80) || null;
+
+  const admin = createAdminClient();
+  await admin.from("staff").update({ tag }).eq("id", staffId).eq("role", "doctor");
 
   revalidateStaff();
 }

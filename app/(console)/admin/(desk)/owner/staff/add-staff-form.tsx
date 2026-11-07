@@ -107,6 +107,23 @@ export default function AddStaffForm({ designations }: { designations: string[] 
         )}
         {role === "doctor" && (
           <div>
+            <label htmlFor="tag" className={label}>
+              Tag <span className="font-medium text-muted">(optional)</span>
+            </label>
+            <input
+              id="tag"
+              name="tag"
+              maxLength={80}
+              placeholder="e.g. Founder & Lead Dermatologist"
+              className={field}
+            />
+            <p className="mt-1.5 text-xs text-muted">
+              Shown on the website under the doctor&rsquo;s name, above the designation.
+            </p>
+          </div>
+        )}
+        {role === "doctor" && (
+          <div>
             <label htmlFor="visit_fee" className={label}>
               Visit price (৳)
             </label>

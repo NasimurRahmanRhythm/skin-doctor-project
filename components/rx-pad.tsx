@@ -3,6 +3,7 @@ import { CLINIC_ADDRESS, CLINIC_PHONES } from "@/lib/clinic";
 import {
   formatDose,
   formatDuration,
+  formatProcedure,
   MEAL_LABEL,
   type Investigation,
   type Medicine,
@@ -282,9 +283,11 @@ export function ReadMedicines({ items }: { items: Medicine[] }) {
         <li key={i} className="break-inside-avoid">
           <div className="flex gap-2 text-[15px] font-semibold">
             <span className="w-5 shrink-0 text-right text-muted">{i + 1}.</span>
-            <span className="whitespace-pre-line">{m.name}</span>
+            <span className="whitespace-pre-line">
+              {m.kind === "procedure" ? formatProcedure(m) : m.name}
+            </span>
           </div>
-          {m.kind !== "other" && (
+          {(m.kind === undefined || m.kind === "tablet") && (
             <div className="mt-0.5 flex items-end pl-7 text-[13px]">
               <span className="font-semibold tabular-nums">{formatDose(m.dose)}</span>
               <Leader />

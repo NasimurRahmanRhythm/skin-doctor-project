@@ -26,6 +26,7 @@ import {
   type Medicine,
   type MedicineKind,
   type PadData,
+  type ProcedureMedicine,
   type TabletMedicine,
 } from "@/lib/prescription";
 import { savePad } from "../actions";
@@ -372,6 +373,61 @@ function DurationPicker({
   );
 }
 
+/** A small whole-number box for a procedure's sessions and interval. */
+function CountBox({
+  value,
+  label,
+  max,
+  onChange,
+}: {
+  value: number;
+  label: string;
+  max: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <input
+      type="number"
+      min={1}
+      max={max}
+      value={value}
+      aria-label={label}
+      title={label}
+      onFocus={(e) => e.target.select()}
+      onChange={(e) => onChange(Math.max(1, Math.min(max, Math.trunc(Number(e.target.value)) || 1)))}
+      className="h-8 w-14 rounded-md border border-hairline bg-surface text-center text-sm font-semibold text-fg transition-ui focus:border-primary focus:shadow-[0_0_0_3px_var(--ring)] focus:outline-none"
+    />
+  );
+}
+
+/** "need [7] sessions in every [15] [days]" under a procedure's name. */
+function ProcedureSchedule({
+  value,
+  onChange,
+}: {
+  value: ProcedureMedicine;
+  onChange: (patch: Partial<ProcedureMedicine>) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted">
+      <span>need</span>
+      <CountBox value={value.sessions} label="How many sessions" max={100} onChange={(sessions) => onChange({ sessions })} />
+      <span>{value.sessions === 1 ? "session" : "sessions"} in every</span>
+      <CountBox value={value.every} label="Every how many" max={365} onChange={(every) => onChange({ every })} />
+      <select
+        value={value.unit}
+        aria-label="Days, weeks or months"
+        onChange={(e) => onChange({ unit: e.target.value as ProcedureMedicine["unit"] })}
+        className="h-8 rounded-md border border-hairline bg-surface px-2 text-xs font-semibold text-fg transition-ui focus:border-primary focus:shadow-[0_0_0_3px_var(--ring)] focus:outline-none"
+      >
+        <option value="days">Days</option>
+        <option value="weeks">Weeks</option>
+        <option value="months">Months</option>
+      </select>
+    </div>
+  );
+}
+
 function MedicineList({
   items,
   onChange,
@@ -394,13 +450,14 @@ function MedicineList({
     const row = items.length;
     onChange([...items, emptyMedicine(name, kind)]);
     setDraft("");
-    // A tablet goes straight to its dose; a non-tablet has none, so the cursor
-    // stays in the add box for the next one. The row exists after the paint.
-    if (kind === "tablet") requestAnimationFrame(() => firstDose.current[row]?.focus());
+    // A tablet goes straight to its dose, a procedure to its session count; a
+    // non-medicine has neither, so the cursor stays in the add box for the next
+    // one. The row exists after the paint.
+    if (kind !== "other") requestAnimationFrame(() => firstDose.current[row]?.focus());
   }
 
-  /** Only a tablet has schedule fields to change. */
-  const update = (i: number, patch: Partial<TabletMedicine>) =>
+  /** Tablets and procedures have schedule fields to change. */
+  const update = (i: number, patch: Partial<TabletMedicine> | Partial<ProcedureMedicine>) =>
     onChange(items.map((m, j) => (j === i ? ({ ...m, ...patch } as Medicine) : m)));
 
   const move = (i: number, by: -1 | 1) => {
@@ -467,7 +524,17 @@ function MedicineList({
                 />
               </div>
 
-              {m.kind !== "other" && (
+              {m.kind === "procedure" && (
+                <div
+                  className="mt-1.5 pl-7"
+                  // Enter on the name, or adding one, lands on the session count.
+                  ref={(el) => void (firstDose.current[i] = el?.querySelector("input") ?? null)}
+                >
+                  <ProcedureSchedule value={m} onChange={(patch) => update(i, patch)} />
+                </div>
+              )}
+
+              {(m.kind === undefined || m.kind === "tablet") && (
               <div className="mt-1.5 flex flex-wrap items-center gap-y-2 pl-7">
                 <div className="flex shrink-0 items-center gap-1 text-sm font-semibold text-muted">
                   {m.dose.map((d, k) => (
@@ -511,6 +578,7 @@ function MedicineList({
           [
             ["tablet", "Medicine"],
             ["other", "Non-medicine"],
+            ["procedure", "Procedure"],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -532,7 +600,7 @@ function MedicineList({
           </button>
         ))}
       </div>
-      {kind === "tablet" ? (
+      {kind !== "other" ? (
         <div className="flex gap-2">
           <input
             ref={(el) => {
@@ -541,7 +609,11 @@ function MedicineList({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => onEnter(e, add)}
-            placeholder="Medicine, e.g. Tab. Cetirizine 10 mg — press Enter"
+            placeholder={
+              kind === "procedure"
+                ? "Procedure, e.g. Laser hair removal — press Enter"
+                : "Medicine, e.g. Tab. Cetirizine 10 mg — press Enter"
+            }
             className={`${addInput} text-sm`}
           />
           <button

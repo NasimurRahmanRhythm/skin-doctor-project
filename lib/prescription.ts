@@ -34,9 +34,21 @@ export type TabletMedicine = {
 
 export type OtherMedicine = { kind: "other"; name: string };
 
-export type Medicine = TabletMedicine | OtherMedicine;
+/**
+ * A course of sessions, printed as one line:
+ * "<name> need <sessions> sessions in every <every> <unit>".
+ */
+export type ProcedureMedicine = {
+  kind: "procedure";
+  name: string;
+  sessions: number;
+  every: number;
+  unit: "days" | "weeks" | "months";
+};
 
-export type MedicineKind = "tablet" | "other";
+export type Medicine = TabletMedicine | OtherMedicine | ProcedureMedicine;
+
+export type MedicineKind = "tablet" | "other" | "procedure";
 
 /**
  * A test the doctor orders. Results are no longer written on the pad; older
@@ -63,11 +75,18 @@ const medicineName = z.string().trim().min(1, "Every medicine needs a name.").ma
 // A non-medicine can run to several lines: a sunscreen and how to use it.
 const otherName = z.string().trim().min(1, "Every entry needs some text.").max(1000);
 
-// The non-tablet shape is tried first: it is the one that says so outright.
-// Anything else — including every medicine saved before `kind` existed — must
-// be a tablet with a full schedule.
+// The non-tablet shapes are tried first: they are the ones that say so
+// outright. Anything else — including every medicine saved before `kind`
+// existed — must be a tablet with a full schedule.
 export const medicineSchema = z.union([
   z.object({ kind: z.literal("other"), name: otherName }),
+  z.object({
+    kind: z.literal("procedure"),
+    name: z.string().trim().min(1, "Every procedure needs a name.").max(200),
+    sessions: z.number().int().min(1).max(100),
+    every: z.number().int().min(1).max(365),
+    unit: z.enum(["days", "weeks", "months"]),
+  }),
   z.object({
     kind: z.literal("tablet").optional(),
     name: medicineName,
@@ -198,6 +217,13 @@ export function formatDuration(d: Duration): string {
   return `${d.count} ${unit}`;
 }
 
+/** "Laser need 7 sessions in every 15 days". */
+export function formatProcedure(p: ProcedureMedicine): string {
+  const sessions = `${p.sessions} ${p.sessions === 1 ? "session" : "sessions"}`;
+  const unit = p.every === 1 ? p.unit.slice(0, -1) : p.unit;
+  return `${p.name} need ${sessions} in every ${p.every} ${unit}`;
+}
+
 /** "53 Yrs 5 M" from a date of birth, the way the pad prints it. */
 export function ageLabel(p: {
   date_of_birth?: string | null;
@@ -216,6 +242,7 @@ export function ageLabel(p: {
 
 export function emptyMedicine(name: string, kind: MedicineKind = "tablet"): Medicine {
   if (kind === "other") return { kind, name };
+  if (kind === "procedure") return { kind, name, sessions: 1, every: 1, unit: "weeks" };
   return {
     kind,
     name,

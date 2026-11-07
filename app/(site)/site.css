@@ -1847,6 +1847,13 @@ html.has-cursor .site-modal button {
   font-size: 1.4rem;
   letter-spacing: -0.01em;
 }
+/* Between the name and the designation: the owner's short tag. */
+.member-tag {
+  margin-top: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--ink);
+}
 .member-role {
   font-size: 0.78rem;
   letter-spacing: 0.14em;

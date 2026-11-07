@@ -241,6 +241,8 @@ export async function countRows(table: "site_treatments" | "site_packages" | "si
 export type SiteDoctor = {
   id: string;
   name: string;
+  /** A short line under the name, above the designation; optional. */
+  tag: string | null;
   designation: string | null;
   photo: string | null;
 };
@@ -250,14 +252,23 @@ export type SiteDoctor = {
  * takes the first four, /team all of them.
  */
 export async function getDoctors(limit?: number): Promise<SiteDoctor[]> {
-  type Row = { id: string; full_name: string; specialty: string | null; photo_path: string | null };
-  const columns = "id, full_name, specialty, photo_path";
-  // Until migration 20261101000026 gives the view a sort_order, oldest first.
-  const hasOrder = await anon()
-    .from("website_doctors")
-    .select("sort_order")
-    .limit(1)
-    .then(({ error }) => !error, () => false);
+  type Row = {
+    id: string;
+    full_name: string;
+    specialty: string | null;
+    photo_path: string | null;
+    tag?: string | null;
+  };
+  // Which columns the view has so far: sort_order arrives with migration
+  // 20261101000026 (until then, oldest first), tag with 20261107000027.
+  const has = async (column: string) =>
+    anon()
+      .from("website_doctors")
+      .select(column)
+      .limit(1)
+      .then(({ error }) => !error, () => false);
+  const [hasOrder, hasTag] = await Promise.all([has("sort_order"), has("tag")]);
+  const columns = `id, full_name, specialty, photo_path${hasTag ? ", tag" : ""}`;
   const data = await rows<Row>("website_doctors", columns, {
     order: hasOrder ? "sort" : "created",
     limit,
@@ -265,6 +276,7 @@ export async function getDoctors(limit?: number): Promise<SiteDoctor[]> {
   return data.map((d) => ({
     id: d.id,
     name: d.full_name,
+    tag: d.tag?.trim() || null,
     designation: d.specialty,
     photo: publicImageUrl("staff-photos", d.photo_path),
   }));

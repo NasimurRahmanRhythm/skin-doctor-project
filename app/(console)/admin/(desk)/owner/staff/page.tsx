@@ -20,6 +20,7 @@ import {
   setStaffActive,
   setStaffDesignation,
   setStaffOnWebsite,
+  setStaffTag,
   setStaffVisitFee,
 } from "../actions";
 import AddStaffForm from "./add-staff-form";
@@ -70,7 +71,7 @@ export default async function StaffPage() {
     "id, email, full_name, role, specialty, is_active, created_at, photo_path, show_on_website";
   const readTeam = (columns: string) =>
     supabase.from("staff").select(columns).order("role").order("full_name");
-  const [teamResult, { data: todayVisits }, { data: designationRows }, orderResult] = await Promise.all([
+  const [teamResult, { data: todayVisits }, { data: designationRows }, orderResult, tagResult] = await Promise.all([
     readTeam(`${staffColumns}, visit_fee`),
     supabase
       .from("visits")
@@ -79,6 +80,8 @@ export default async function StaffPage() {
     supabase.from("designations").select("id, name").order("name"),
     // Errors until migration 20261101000026 adds website_order.
     supabase.from("staff").select("id, website_order").eq("role", "doctor"),
+    // Errors until migration 20261107000027 adds tag.
+    supabase.from("staff").select("id, tag").eq("role", "doctor"),
   ]);
   const designations = designationRows ?? [];
 
@@ -114,6 +117,10 @@ export default async function StaffPage() {
   // are the landing page's Our Team.
   const orderOf = new Map(
     (orderResult.data ?? []).map((r) => [r.id as string, r.website_order as number | null]),
+  );
+  const hasTag = !tagResult.error;
+  const tagOf = new Map(
+    (tagResult.data ?? []).map((r) => [r.id as string, (r.tag as string | null) ?? ""]),
   );
   const onWebsite = (team ?? [])
     .filter((s) => s.role === "doctor" && s.is_active && s.show_on_website)
@@ -238,6 +245,29 @@ export default async function StaffPage() {
                         s.specialty
                       )}
                     </span>
+                    {s.role === "doctor" && hasTag && (
+                      <form
+                        action={setStaffTag}
+                        className="mt-1 flex items-center gap-1 pl-8 text-xs text-muted"
+                      >
+                        <input type="hidden" name="staff_id" value={s.id} />
+                        <label htmlFor={`tag-${s.id}`}>Tag</label>
+                        <input
+                          id={`tag-${s.id}`}
+                          name="tag"
+                          maxLength={80}
+                          defaultValue={tagOf.get(s.id) ?? ""}
+                          placeholder="—"
+                          className="w-40 rounded-md border border-hairline bg-transparent px-1.5 py-0.5 text-xs text-fg focus:border-primary focus:outline-none"
+                        />
+                        <button
+                          type="submit"
+                          className="text-[11px] font-bold text-primary underline-offset-2 hover:underline"
+                        >
+                          Save
+                        </button>
+                      </form>
+                    )}
                     {s.role === "doctor" && hasVisitFee && (
                       <form
                         action={setStaffVisitFee}
