@@ -1,5 +1,5 @@
 import Brand from "@/components/brand";
-import DeskNotifications from "@/components/desk-notifications";
+import DeskNotifications, { type DeskNotification } from "@/components/desk-notifications";
 import { btnQuiet } from "@/components/ui";
 import { requireStaff, ROLE_HOME, ROLE_LABEL } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -10,26 +10,26 @@ export default async function DeskLayout({
 }: LayoutProps<"/admin">) {
   const staff = await requireStaff();
 
-  // The nurse and doctor desks receive hand-offs, and reception hears when a
-  // visit it checked in is completed, so those three open a realtime channel.
-  const wantsAlerts = staff.role !== "owner";
-  let unread: {
-    id: string;
-    visit_id: string | null;
-    title: string;
-    body: string | null;
-    created_at: string;
-  }[] = [];
+  // The nurse and doctor desks receive hand-offs, reception hears when a
+  // visit it checked in is completed or a caller is sent over, and the owner
+  // hears of complaint calls, so those open a realtime channel.
+  const wantsAlerts = ["receptionist", "nurse", "doctor", "owner"].includes(staff.role);
+  let unread: DeskNotification[] = [];
 
   if (wantsAlerts) {
     const supabase = await createClient();
-    const { data } = await supabase
-      .from("notifications")
-      .select("id, visit_id, title, body, created_at")
-      .eq("recipient_id", staff.id)
-      .is("read_at", null)
-      .order("created_at", { ascending: false })
-      .limit(30);
+    const read = (columns: string) =>
+      supabase
+        .from("notifications")
+        .select(columns)
+        .eq("recipient_id", staff.id)
+        .is("read_at", null)
+        .order("created_at", { ascending: false })
+        .limit(30)
+        .overrideTypes<DeskNotification[], { merge: false }>();
+    // link arrives with migration 20261108000031; until then, without it.
+    const withLink = await read("id, visit_id, title, body, created_at, link");
+    const { data } = withLink.error ? await read("id, visit_id, title, body, created_at") : withLink;
     unread = data ?? [];
   }
 

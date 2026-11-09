@@ -12,6 +12,8 @@ export type DeskNotification = {
   title: string;
   body: string | null;
   created_at: string;
+  /** Where it opens, for alerts that are not about a visit. */
+  link?: string | null;
 };
 
 type Props = {
@@ -176,7 +178,7 @@ export default function DeskNotifications({ staffId, basePath, initial }: Props)
                   {items.map((n) => (
                     <li key={n.id}>
                       <Link
-                        href={n.visit_id ? `${basePath}/${n.visit_id}` : basePath}
+                        href={n.link ?? (n.visit_id ? `${basePath}/${n.visit_id}` : basePath)}
                         onClick={() => setOpen(false)}
                         className="block px-4 py-3 hover:bg-subtle"
                       >

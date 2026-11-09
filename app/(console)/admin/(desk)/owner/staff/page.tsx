@@ -47,6 +47,7 @@ const ROLE_TONE: Record<string, string> = {
   receptionist: "border-accent/35 bg-accent-soft text-accent",
   nurse: "border-warn/35 bg-warn/12 text-warn",
   doctor: "border-primary/35 bg-primary-soft text-primary",
+  call_center: "border-ok/35 bg-ok/10 text-ok",
 };
 
 function RolePill({ role }: { role: string }) {
@@ -136,7 +137,7 @@ export default async function StaffPage() {
   // Only active people are counted. A deactivated doctor cannot sign in and
   // receives no new patients, so counting them would overstate the cover the
   // clinic actually has tomorrow morning.
-  const byRole = { doctor: 0, nurse: 0, receptionist: 0 };
+  const byRole = { doctor: 0, nurse: 0, receptionist: 0, call_center: 0 };
   for (const s of active) {
     if (s.role in byRole) byRole[s.role as keyof typeof byRole]++;
   }
@@ -164,7 +165,7 @@ export default async function StaffPage() {
           </Link>
         </div>
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-3">
+        <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat label="Doctors" value={byRole.doctor} dot="bg-sky-300" />
           <Stat label="Nurses" value={byRole.nurse} dot="bg-amber-300" />
           <Stat
@@ -172,6 +173,7 @@ export default async function StaffPage() {
             value={byRole.receptionist}
             dot="bg-orange-300"
           />
+          <Stat label="Call center" value={byRole.call_center} dot="bg-emerald-300" />
         </div>
       </section>
 
@@ -204,7 +206,7 @@ export default async function StaffPage() {
                       name={s.full_name}
                       photoUrl={publicImageUrl("staff-photos", s.photo_path)}
                       role={
-                        s.role === "owner"
+                        s.role === "owner" || s.role === "call_center"
                           ? undefined
                           : (s.role as "receptionist" | "nurse" | "doctor")
                       }

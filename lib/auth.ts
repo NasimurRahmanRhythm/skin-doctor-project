@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export type AppRole = "owner" | "receptionist" | "nurse" | "doctor";
+export type AppRole = "owner" | "receptionist" | "nurse" | "doctor" | "call_center";
 
 export type SessionStaff = {
   id: string;
@@ -18,6 +18,7 @@ export const ROLE_HOME: Record<AppRole, string> = {
   receptionist: "/admin/reception",
   nurse: "/admin/nurse",
   doctor: "/admin/doctor",
+  call_center: "/admin/call-center",
 };
 
 export const ROLE_LABEL: Record<AppRole, string> = {
@@ -25,6 +26,7 @@ export const ROLE_LABEL: Record<AppRole, string> = {
   receptionist: "Reception",
   nurse: "Nurse desk",
   doctor: "Doctor desk",
+  call_center: "Call center",
 };
 
 /**

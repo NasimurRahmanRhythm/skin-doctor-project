@@ -21,6 +21,13 @@ export default async function ReceptionPage({
   const supabase = await createClient();
   const { start, end } = clinicDayRange();
 
+  // A caller the call center sent over: the alert links here with ?call=<id>,
+  // and the check-in form opens already holding their name and number.
+  const callId = typeof sp.call === "string" && /^[0-9a-f-]{36}$/i.test(sp.call) ? sp.call : null;
+  const { data: referred } = callId
+    ? await supabase.rpc("call_prefill", { p_call: callId }).maybeSingle<{ customer_name: string; phone: string }>()
+    : { data: null };
+
   // Reception can read every visit now, so the list is narrowed to this
   // receptionist's own check-ins, and to today so it stays short at a busy desk.
   type Doctor = { id: string; full_name: string; specialty: string | null; visit_fee?: number | null };
@@ -83,7 +90,11 @@ export default async function ReceptionPage({
         />
       </section>
 
-      <CheckInForm doctors={doctors ?? []} />
+      <CheckInForm
+        key={callId ?? "walk-in"}
+        doctors={doctors ?? []}
+        prefill={referred ? { name: referred.customer_name, phone: referred.phone } : undefined}
+      />
 
       <section className={`${card} ${cardPad}`}>
         <SectionHead

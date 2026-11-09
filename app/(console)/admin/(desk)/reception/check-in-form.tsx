@@ -116,7 +116,14 @@ type Doctor = {
 
 const visitPrice = (fee: number) => `৳ ${fee.toLocaleString("en-IN")}`;
 
-export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
+export default function CheckInForm({
+  doctors,
+  prefill,
+}: {
+  doctors: Doctor[];
+  /** A caller sent over by the call center: their name and number to start from. */
+  prefill?: { name: string; phone: string };
+}) {
   const [state, action] = useActionState<CheckInState, FormData>(checkIn, {});
   const [, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
@@ -132,8 +139,8 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
 
   // The patient's details are held here rather than left uncontrolled,
   // because picking a record has to fill them in after they have rendered.
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [name, setName] = useState(prefill?.name ?? "");
+  const [phone, setPhone] = useState(prefill?.phone ?? "");
   const [dob, setDob] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
@@ -313,6 +320,14 @@ export default function CheckInForm({ doctors }: { doctors: Doctor[] }) {
         title="Patient check-in"
         hint="Goes to the nurse for vitals, then on to the doctor."
       />
+
+      {prefill && (
+        <p className="mt-4 rounded-control border border-primary/35 bg-primary/8 px-3.5 py-2.5 text-sm text-primary">
+          Sent over by the call center: <span className="font-bold">{prefill.name}</span> ·{" "}
+          {prefill.phone}. If they are already on file, pick them below; otherwise carry on as
+          a new patient.
+        </p>
+      )}
 
       {/* New or old comes first: it decides whether the desk types the
           details in or pulls them from the record. */}

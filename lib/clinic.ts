@@ -18,7 +18,7 @@ export const CLINIC_PHONES = ["01341-333344", "01303-228899"];
 export const CLINIC_PHONE = CLINIC_PHONES[0];
 
 /** Bangladesh has observed no DST since 2009, so the offset is fixed. */
-const CLINIC_UTC_OFFSET = "+06:00";
+export const CLINIC_UTC_OFFSET = "+06:00";
 
 /** Today in the clinic's timezone, as YYYY-MM-DD. */
 export function clinicToday(now: Date = new Date()): string {

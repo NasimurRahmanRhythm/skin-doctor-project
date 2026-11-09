@@ -12,7 +12,7 @@ export type StaffState = { error?: string; notice?: string };
 const staffSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address."),
   full_name: z.string().trim().min(1, "Enter their name."),
-  role: z.enum(["owner", "receptionist", "nurse", "doctor"]),
+  role: z.enum(["owner", "receptionist", "nurse", "doctor", "call_center"]),
   specialty: z.string().trim().optional(),
   visit_fee: z.string().trim().optional(),
   tag: z.string().trim().max(80, "Keep the tag under 80 characters.").optional(),

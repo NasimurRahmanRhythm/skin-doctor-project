@@ -3,6 +3,7 @@ import VisitSearch from "@/components/visit-search";
 import { requireRole } from "@/lib/auth";
 import { clinicDayRange, formatClinicDate } from "@/lib/clinic";
 import { createClient } from "@/lib/supabase/server";
+import WeeklyCallReport, { readWeek } from "@/components/weekly-call-report";
 
 /**
  * A tile on the dark band. The dot carries the same colour the status pill
@@ -55,6 +56,11 @@ export default async function OwnerPage({
     .select("id", { count: "exact", head: true })
     .eq("is_read", false);
 
+  // ---- the call center's week ---------------------------------------------
+  const week = readWeek(sp.week);
+  const { data: people } = await supabase.from("staff_directory").select("id, full_name");
+  const agentNameById = new Map((people ?? []).map((p) => [p.id as string, p.full_name as string]));
+
   const counts = { awaiting_vitals: 0, awaiting_doctor: 0, completed: 0 };
   for (const v of todayVisits ?? []) {
     counts[v.status as keyof typeof counts]++;
@@ -85,6 +91,10 @@ export default async function OwnerPage({
                 </span>
               )}
             </Link>
+            <Link href="/admin/owner/call-center" className={heroLink}>
+              Call center
+              <span aria-hidden="true">→</span>
+            </Link>
             <Link href="/admin/owner/payments" className={heroLink}>
               Payments
               <span aria-hidden="true">→</span>
@@ -111,6 +121,18 @@ export default async function OwnerPage({
           <Stat label="Completed" value={counts.completed} dot="bg-emerald-300" />
         </div>
       </section>
+
+      <WeeklyCallReport
+        supabase={supabase}
+        monday={week}
+        agentNameById={agentNameById}
+        hrefForWeek={(monday) => {
+          const params = new URLSearchParams();
+          for (const [k, v] of Object.entries(sp)) if (typeof v === "string" && k !== "week") params.set(k, v);
+          params.set("week", monday);
+          return `/admin/owner?${params}`;
+        }}
+      />
 
       <VisitSearch searchParams={sp} basePath="/admin/owner" />
     </div>
