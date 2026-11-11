@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { btnGhost, btnPrimary, btnQuiet } from "@/components/ui";
 import { DEFAULT_FIELDS, EXPORT_FIELDS, type ExportField } from "@/lib/call-log";
 import type { CallFilters } from "@/lib/call-log-query";
-import { exportCalls } from "./actions";
+import { exportCalls, type ExportFormat } from "./actions";
 
 const LABEL = new Map(EXPORT_FIELDS.map((f) => [f.key, f.label]));
 
@@ -20,8 +20,8 @@ function rowsFrom(saved: ExportField[]): Row[] {
 }
 
 /**
- * "Export CSV": a dialog where the owner ticks the columns they want and puts
- * them in order. Download sends every call matching the current filters, and
+ * "Export": a dialog where the owner ticks the columns they want and puts
+ * them in order. Download (CSV or Excel) sends every call matching the current filters, and
  * the choice is saved so the dialog opens the same way next time.
  */
 export default function ExportDialog({
@@ -37,6 +37,8 @@ export default function ExportDialog({
   const [rows, setRows] = useState<Row[]>(() => rowsFrom(saved));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Which button is working, so only that one says "Preparing…".
+  const [making, setMaking] = useState<ExportFormat | null>(null);
 
   const picked = rows.filter((r) => r.on).map((r) => r.key);
 
@@ -48,19 +50,26 @@ export default function ExportDialog({
     setRows(next);
   }
 
-  function download() {
+  function download(format: ExportFormat) {
     setError(null);
+    setMaking(format);
     startTransition(async () => {
-      const res = await exportCalls(filters, picked);
-      if (res.error || !res.csv) {
-        setError(res.error ?? "Could not make the CSV.");
+      const res = await exportCalls(filters, picked, format);
+      setMaking(null);
+      if (res.error || !res.data) {
+        setError(res.error ?? "Could not make the file.");
         return;
       }
-      // The BOM makes Excel read Bangla names as UTF-8.
-      const blob = new Blob(["﻿" + res.csv], { type: "text/csv;charset=utf-8" });
+      const blob =
+        format === "csv"
+          ? // The BOM makes Excel read Bangla names as UTF-8.
+            new Blob(["\ufeff" + res.data], { type: "text/csv;charset=utf-8" })
+          : new Blob([Uint8Array.from(atob(res.data), (ch) => ch.charCodeAt(0))], {
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = res.filename ?? "calls.csv";
+      a.download = res.filename ?? `calls.${format}`;
       a.click();
       URL.revokeObjectURL(a.href);
       dialog.current?.close();
@@ -79,7 +88,7 @@ export default function ExportDialog({
         }}
         className={btnGhost}
       >
-        Export CSV
+        Export
       </button>
 
       <dialog
@@ -89,7 +98,7 @@ export default function ExportDialog({
       >
         <div className="px-5 py-5 sm:px-6">
           <h2 id="export-title" className="text-base font-extrabold">
-            Export calls to CSV
+            Export calls
           </h2>
           <p className="mt-1 text-sm text-muted">
             Tick the fields you want and put them in order. All {total}{" "}
@@ -151,14 +160,22 @@ export default function ExportDialog({
             <button type="button" onClick={() => dialog.current?.close()} className={btnGhost}>
               Cancel
             </button>
-            <button
-              type="button"
-              onClick={download}
-              disabled={pending || picked.length === 0}
-              className={btnPrimary}
-            >
-              {pending ? "Preparing…" : `Download ${picked.length} ${picked.length === 1 ? "field" : "fields"}`}
-            </button>
+            {(
+              [
+                ["csv", "Download CSV", btnGhost],
+                ["xlsx", "Download Excel (.xlsx)", btnPrimary],
+              ] as const
+            ).map(([format, label, style]) => (
+              <button
+                key={format}
+                type="button"
+                onClick={() => download(format)}
+                disabled={pending || picked.length === 0}
+                className={style}
+              >
+                {making === format ? "Preparing…" : label}
+              </button>
+            ))}
           </div>
         </div>
       </dialog>

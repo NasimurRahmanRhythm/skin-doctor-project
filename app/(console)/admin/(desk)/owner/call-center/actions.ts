@@ -47,15 +47,45 @@ function callTime(iso: string): string {
 
 const cell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
+/** How wide each column opens in Excel, in characters. */
+const XLSX_WIDTH: Record<ExportField, number> = {
+  call_time: 18,
+  agent: 18,
+  customer_name: 24,
+  phone: 16,
+  call_type: 11,
+  reason: 18,
+  product: 24,
+  outcome: 18,
+  duration_min: 14,
+  follow_up_date: 15,
+  recording_url: 30,
+  notes: 50,
+};
+
+/** A Dhaka wall-clock time as a Date Excel shows unchanged (Excel has no time zones). */
+const excelTime = (iso: string) => new Date(`${callTime(iso).replace(" ", "T")}:00Z`);
+const excelDay = (day: string) => new Date(`${day}T00:00:00Z`);
+
+export type ExportFormat = "csv" | "xlsx";
+export type ExportResult = {
+  /** CSV text, or the .xlsx file as base64. */
+  data?: string;
+  filename?: string;
+  error?: string;
+};
+
 /**
  * Every call matching the owner's filters — not just the page on screen — as
- * CSV, with the columns they picked in the order they put them. The choice is
- * saved on their staff row, so the dialog opens the same way next time.
+ * CSV or an Excel workbook, with the columns they picked in the order they put
+ * them. The choice is saved on their staff row, so the dialog opens the same
+ * way next time.
  */
 export async function exportCalls(
   filtersInput: CallFilters,
   fieldsInput: string[],
-): Promise<{ csv?: string; filename?: string; error?: string }> {
+  format: ExportFormat = "csv",
+): Promise<ExportResult> {
   const owner = await requireRole("owner");
   // Both arrive from the browser: checked again here.
   const filters = readCallFilters({ ...filtersInput });
@@ -100,12 +130,49 @@ export async function exportCalls(
     notes: (c) => c.notes,
   };
   const labelOf = new Map(EXPORT_FIELDS.map((f) => [f.key, f.label]));
-
-  const lines = [
-    fields.map((f) => cell(labelOf.get(f))).join(","),
-    ...rows.map((c) => fields.map((f) => cell(value[f](c))).join(",")),
-  ];
-
+  const filename = `dermasoul-calls-${clinicToday()}.${format}`;
   revalidatePath("/admin/owner/call-center");
-  return { csv: lines.join("\r\n"), filename: `dermasoul-calls-${clinicToday()}.csv` };
+
+  if (format === "csv") {
+    const lines = [
+      fields.map((f) => cell(labelOf.get(f))).join(","),
+      ...rows.map((c) => fields.map((f) => cell(value[f](c))).join(",")),
+    ];
+    return { data: lines.join("\r\n"), filename };
+  }
+
+  // Excel: real dates and numbers (so they sort and add up), a bold header
+  // that stays put while scrolling, a filter on every column, clickable
+  // recording links.
+  const { default: ExcelJS } = await import("exceljs");
+  const book = new ExcelJS.Workbook();
+  book.creator = "DermaSoul Medical Aesthetics";
+  const sheet = book.addWorksheet("Calls", { views: [{ state: "frozen", ySplit: 1 }] });
+  sheet.columns = fields.map((f) => ({ header: labelOf.get(f), key: f, width: XLSX_WIDTH[f] }));
+  sheet.getRow(1).font = { bold: true };
+
+  const typed: Partial<Record<ExportField, (c: CallLog) => unknown>> = {
+    call_time: (c) => excelTime(c.created_at),
+    duration_min: (c) => (c.duration_min != null ? Number(c.duration_min) : null),
+    follow_up_date: (c) => (c.follow_up_date ? excelDay(c.follow_up_date) : null),
+    recording_url: (c) => (c.recording_url ? { text: c.recording_url, hyperlink: c.recording_url } : null),
+  };
+  for (const c of rows) {
+    sheet.addRow(Object.fromEntries(fields.map((f) => [f, (typed[f] ?? value[f])(c) ?? null])));
+  }
+
+  const formats: Partial<Record<ExportField, string>> = {
+    call_time: "yyyy-mm-dd hh:mm",
+    follow_up_date: "yyyy-mm-dd",
+    duration_min: "0.0",
+  };
+  fields.forEach((f, i) => {
+    const col = sheet.getColumn(i + 1);
+    if (formats[f]) col.numFmt = formats[f]!;
+    if (f === "notes") col.alignment = { wrapText: true, vertical: "top" };
+  });
+  if (rows.length) sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: fields.length } };
+
+  const buffer = await book.xlsx.writeBuffer();
+  return { data: Buffer.from(buffer).toString("base64"), filename };
 }
