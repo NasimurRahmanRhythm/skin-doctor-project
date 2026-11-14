@@ -275,8 +275,33 @@ export function Leader() {
   );
 }
 
+/**
+ * The Rx as printed: procedures first under their own heading, then the
+ * medicines and non-medicines, each part numbered from 1.
+ */
 export function ReadMedicines({ items }: { items: Medicine[] }) {
   if (items.length === 0) return <Blank lines={6} />;
+  const procedures = items.filter((m) => m.kind === "procedure");
+  const medicines = items.filter((m) => m.kind !== "procedure");
+  if (procedures.length === 0) return <MedicineLines items={medicines} />;
+  const sub = "text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted";
+  return (
+    <div className="space-y-4">
+      <div>
+        <span className={sub}>Procedure</span>
+        <div className="mt-1.5"><MedicineLines items={procedures} /></div>
+      </div>
+      {medicines.length > 0 && (
+        <div>
+          <span className={sub}>Medicine</span>
+          <div className="mt-1.5"><MedicineLines items={medicines} /></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MedicineLines({ items }: { items: Medicine[] }) {
   return (
     <ol className="space-y-3.5">
       {items.map((m, i) => (

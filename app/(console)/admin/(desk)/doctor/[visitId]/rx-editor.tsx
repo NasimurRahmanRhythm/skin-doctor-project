@@ -428,19 +428,28 @@ function ProcedureSchedule({
   );
 }
 
+/**
+ * One list on the Rx: `procedures` (the Procedure part at the top: each a
+ * name and "need N sessions in every …") or `medicines` (medicines and
+ * non-medicines, chosen with the toggle above the add box).
+ */
 function MedicineList({
   items,
   onChange,
   addRef,
+  part = "medicines",
 }: {
   items: Medicine[];
   onChange: (next: Medicine[]) => void;
   addRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
+  part?: "procedures" | "medicines";
 }) {
   const [draft, setDraft] = useState("");
-  // What the next medicine added will be. A non-medicine is just its text,
-  // which may run to several lines.
-  const [kind, setKind] = useState<MedicineKind>("tablet");
+  // What the next entry added will be. In the medicines part, a non-medicine
+  // is just its text, which may run to several lines.
+  const [chosen, setKind] = useState<MedicineKind>("tablet");
+  const kind: MedicineKind = part === "procedures" ? "procedure" : chosen;
+  const noun = part === "procedures" ? "Procedure" : "Medicine";
   // First dose box of each row, so a new medicine lands the cursor on its dose.
   const firstDose = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -484,7 +493,7 @@ function MedicineList({
                 <InlineText
                   value={m.name}
                   multiline={m.kind === "other"}
-                  label={`Medicine ${i + 1}`}
+                  label={`${noun} ${i + 1}`}
                   onChange={(v) => update(i, { name: v })}
                   onBlur={(v) => {
                     if (!v.trim()) onChange(items.filter((_, j) => j !== i));
@@ -569,6 +578,7 @@ function MedicineList({
         </ol>
       )}
 
+      {part === "medicines" && (
       <div
         role="radiogroup"
         aria-label="Kind of medicine to add"
@@ -578,7 +588,6 @@ function MedicineList({
           [
             ["tablet", "Medicine"],
             ["other", "Non-medicine"],
-            ["procedure", "Procedure"],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -600,6 +609,7 @@ function MedicineList({
           </button>
         ))}
       </div>
+      )}
       {kind !== "other" ? (
         <div className="flex gap-2">
           <input
@@ -659,6 +669,29 @@ function MedicineList({
   );
 }
 
+/** A small heading inside the Rx, with its own + to jump to its add box. */
+function RxPart({
+  title,
+  label,
+  target,
+  children,
+}: {
+  title: string;
+  label: string;
+  target: RefObject<HTMLElement | null>;
+  children: ReactNode;
+}) {
+  return (
+    <div className="mt-3 first:mt-0">
+      <div className="mb-2 flex items-center gap-1.5">
+        <h4 className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted">{title}</h4>
+        <PlusButton label={label} target={target} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // ------------------------------------------------------------- the pad ----
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -713,7 +746,12 @@ export default function RxEditor({
   const investigationsRef = useRef<HTMLInputElement>(null);
   const advicesRef = useRef<HTMLInputElement>(null);
   const medicinesRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const proceduresRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const followUpRef = useRef<HTMLTextAreaElement>(null);
+
+  // The Rx in its two parts: procedures on top, then everything else.
+  const procedures = pad.medicines.filter((m) => m.kind === "procedure");
+  const medicines = pad.medicines.filter((m) => m.kind !== "procedure");
 
   function set<K extends keyof PadData>(key: K, value: PadData[K]) {
     setPad((p) => ({ ...p, [key]: value }));
@@ -889,11 +927,23 @@ export default function RxEditor({
                   <p className="mt-1 whitespace-pre-wrap text-sm">{legacyPrescription}</p>
                 </div>
               )}
-              <MedicineList
-                items={pad.medicines}
-                onChange={(v) => set("medicines", v)}
-                addRef={medicinesRef}
-              />
+              {/* Procedures first, then medicines and non-medicines. They are
+                  saved as one list, procedures at the top. */}
+              <RxPart title="Procedure" label="Add a procedure" target={proceduresRef}>
+                <MedicineList
+                  part="procedures"
+                  items={procedures}
+                  onChange={(v) => set("medicines", [...v, ...medicines])}
+                  addRef={proceduresRef}
+                />
+              </RxPart>
+              <RxPart title="Medicine" label="Add a medicine" target={medicinesRef}>
+                <MedicineList
+                  items={medicines}
+                  onChange={(v) => set("medicines", [...procedures, ...v])}
+                  addRef={medicinesRef}
+                />
+              </RxPart>
             </PadSection>
 
             <PadSection
