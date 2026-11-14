@@ -38,6 +38,10 @@ export default async function InquiriesPage({
     message: r.message as string,
     is_read: r.is_read as boolean,
     when: `${formatClinicDate(r.created_at)}, ${formatClinicTime(r.created_at)}`,
+    // "facebook · nov_peel": where they came from and which ad.
+    campaign:
+      [r.utm_source, r.utm_campaign].filter((v): v is string => typeof v === "string" && v !== "").join(" · ") ||
+      null,
   }));
 
   const tab = (key: "all" | "unread", label: string) => {

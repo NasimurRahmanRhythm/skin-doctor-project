@@ -90,8 +90,22 @@ export async function submitInquiry(_prev: InquiryState, formData: FormData): Pr
     return { error: "We've already received several messages from you this hour. We'll be in touch soon." };
   }
 
+  // The ad campaign this visitor arrived with, if any (the form carries it).
+  const tag = (key: string, max: number) => String(formData.get(key) ?? "").trim().slice(0, max) || null;
+  const campaign = {
+    utm_source: tag("utm_source", 100),
+    utm_medium: tag("utm_medium", 100),
+    utm_campaign: tag("utm_campaign", 150),
+  };
+  const session = String(formData.get("session_id") ?? "");
+  const sessionId = /^[A-Za-z0-9_-]{8,64}$/.test(session) ? session : null;
+
   const { phone, ...rest } = parsed.data;
-  let { error } = await admin.from("inquiries").insert({ ...rest, phone: phone || null, ip });
+  let { error } = await admin.from("inquiries").insert({ ...rest, phone: phone || null, ip, ...campaign });
+  // Before the campaign columns exist (migration 20261114000033), save without them.
+  if (error && /utm_/i.test(error.message)) {
+    ({ error } = await admin.from("inquiries").insert({ ...rest, phone: phone || null, ip }));
+  }
   // Before the phone column exists (migration 20261008000022), keep the
   // number by adding it to the message rather than losing the inquiry.
   if (error && phone && /phone/i.test(error.message)) {
@@ -116,6 +130,16 @@ export async function submitInquiry(_prev: InquiryState, formData: FormData): Pr
   const jar = await cookies();
   const userAgent = h.get("user-agent");
   const sourceUrl = h.get("referer") ?? "https://www.dermasoulbd.com/inquiry";
+  // The site's own counter: a lead, credited to the visit it came from.
+  after(async () => {
+    await admin.from("site_events").insert({
+      event: "lead",
+      path: "/inquiry",
+      session_id: sessionId,
+      ...campaign,
+      device: /Mobi|Android|iPhone|iPad|iPod/i.test(userAgent ?? "") ? "mobile" : "desktop",
+    });
+  });
   after(() =>
     sendServerEvent({
       name: "Lead",

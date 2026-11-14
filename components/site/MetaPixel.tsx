@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
+import { noteArrival, record } from "@/lib/site/analytics";
 import { META_PIXEL_ID, track, trackCustom } from "@/lib/site/pixel";
 
 /** The channel a link opens, if it is one of the ways to reach the clinic. */
@@ -35,8 +36,18 @@ export default function MetaPixel() {
   // Whether this visit to the form has had its BookClick, so a repeat run of
   // the effect does not send a second one.
   const booked = useRef(false);
+  // The page the site's own counter last recorded (null: none yet, so the
+  // first page is counted too).
+  const recorded = useRef<string | null>(null);
 
   useEffect(() => {
+    // The site's own counter (lib/site/analytics) sees every page, the first
+    // included, whether or not Meta is blocked.
+    if (recorded.current !== pathname) {
+      recorded.current = pathname;
+      noteArrival();
+      record("page_view");
+    }
     const from = counted.current;
     if (from !== pathname) {
       counted.current = pathname;
@@ -53,7 +64,10 @@ export default function MetaPixel() {
     const ref = document.referrer ? new URL(document.referrer) : null;
     const previous =
       from !== pathname ? from : ref && ref.origin === window.location.origin && ref.pathname !== "/inquiry" ? ref.pathname : null;
-    if (previous) trackCustom("BookClick", { content_name: previous });
+    if (previous) {
+      trackCustom("BookClick", { content_name: previous });
+      record("book_click", previous);
+    }
   }, [pathname]);
 
   useEffect(() => {
@@ -62,7 +76,10 @@ export default function MetaPixel() {
       if (!a) return;
       const href = a.getAttribute("href") ?? "";
       const channel = contactChannel(href);
-      if (channel) track("Contact", { content_name: channel });
+      if (channel) {
+        track("Contact", { content_name: channel });
+        record("contact", channel);
+      }
     }
     document.addEventListener("click", onClick, { capture: true });
     return () => document.removeEventListener("click", onClick, { capture: true });

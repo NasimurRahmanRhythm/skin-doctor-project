@@ -99,6 +99,10 @@ export default async function OwnerPage({
               Payments
               <span aria-hidden="true">→</span>
             </Link>
+            <Link href="/admin/owner/website-stats" className={heroLink}>
+              Website stats
+              <span aria-hidden="true">→</span>
+            </Link>
             <Link href="/admin/owner/website" className={heroLink}>
               Website
               <span aria-hidden="true">→</span>

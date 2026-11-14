@@ -16,15 +16,17 @@ const hourLabel = (h: number) => `${h % 12 || 12}${h < 12 ? "am" : "pm"}`;
  * A ranked list of bars, one hue, each with its label and number written out,
  * so it reads without hovering or a legend.
  */
-function BarList({
+export function BarList({
   rows,
   total,
+  empty = "No calls in this range.",
 }: {
   rows: { label: string; value: number }[];
   total: number;
+  empty?: string;
 }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
-  if (rows.length === 0) return <p className="text-sm text-muted">No calls in this range.</p>;
+  if (rows.length === 0) return <p className="text-sm text-muted">{empty}</p>;
   return (
     <ul className="space-y-2.5">
       {rows.map((r) => (
@@ -46,7 +48,7 @@ function BarList({
   );
 }
 
-function Panel({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+export function Panel({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0 rounded-control border border-hairline p-4">
       <h3 className="text-sm font-extrabold">{title}</h3>

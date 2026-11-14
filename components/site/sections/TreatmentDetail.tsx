@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import type { SiteTreatment } from "@/lib/site/data";
 import SplitReveal from "@/components/site/fx/SplitReveal";
 import Reveal from "@/components/site/fx/Reveal";
 import { Arrow, ArrowUpRight, Sprig } from "@/components/site/Icons";
+import { record } from "@/lib/site/analytics";
 import { track } from "@/lib/site/pixel";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -99,8 +100,14 @@ export default function TreatmentDetail({
   ].filter((d) => d.body?.trim());
   const hasClosing = !!(t.closingTitle?.trim() || t.closingBody?.trim());
 
-  // Which treatment was looked at, for Meta: its name and group, nothing more.
+  // Which treatment was looked at, for Meta and the site's own counter: its
+  // name and group, nothing more. Once per treatment opened, even if React
+  // runs the effect twice.
+  const viewed = useRef<string | null>(null);
   useEffect(() => {
+    if (viewed.current === t.title) return;
+    viewed.current = t.title;
+    record("view_content", t.title);
     track("ViewContent", {
       content_type: "treatment",
       content_name: t.title,

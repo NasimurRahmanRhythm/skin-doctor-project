@@ -12,6 +12,8 @@ export type Inquiry = {
   message: string;
   is_read: boolean;
   when: string;
+  /** The ad campaign the visitor came from (utm tags), if any. */
+  campaign: string | null;
 };
 
 /** One inquiry: a summary line that opens to the full message. */
@@ -45,6 +47,14 @@ export default function InquiryItem({ inquiry: q }: { inquiry: Inquiry }) {
             <span className={q.is_read ? "font-semibold" : "font-extrabold"}>{q.name}</span>
             <span className="text-xs font-medium text-muted">{q.email}</span>
             {q.phone && <span className="text-xs font-medium text-muted tabular-nums">{q.phone}</span>}
+            {q.campaign && (
+              <span
+                title="The ad campaign this visitor came from"
+                className="rounded-full border border-accent/35 bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent"
+              >
+                {q.campaign}
+              </span>
+            )}
           </span>
           {!open && <span className="mt-0.5 block truncate text-sm font-normal text-muted">{firstLine}</span>}
         </span>

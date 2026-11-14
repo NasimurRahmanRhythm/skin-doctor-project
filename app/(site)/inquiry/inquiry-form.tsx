@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { inquiry } from "@/lib/site/content";
 import { Arrow } from "@/components/site/Icons";
+import { currentCampaign, sessionId } from "@/lib/site/analytics";
 import { newEventId, track } from "@/lib/site/pixel";
 import { submitInquiry, type InquiryState } from "./actions";
 
@@ -25,6 +26,9 @@ export default function InquiryForm({ about }: { about: string | null }) {
   const startedAt = useRef<HTMLInputElement>(null);
   // One id per inquiry, shared with the server's copy of the Lead for Meta.
   const eventId = useRef<HTMLInputElement>(null);
+  // The visit and the ad campaign it came from, so the owner sees which ad
+  // brought this inquiry.
+  const visit = useRef<HTMLDivElement>(null);
 
   // A Lead only for an inquiry that was really saved (spam is answered "ok"
   // too, but without an id).
@@ -52,10 +56,28 @@ export default function InquiryForm({ about }: { about: string | null }) {
       onFocus={() => {
         if (startedAt.current && !startedAt.current.value) startedAt.current.value = String(Date.now());
         if (eventId.current && !eventId.current.value) eventId.current.value = newEventId();
+        const box = visit.current;
+        if (box && !box.dataset.filled) {
+          box.dataset.filled = "1";
+          const c = currentCampaign();
+          const set = (name: string, value?: string) => {
+            const input = box.querySelector<HTMLInputElement>(`input[name="${name}"]`);
+            if (input) input.value = value ?? "";
+          };
+          set("session_id", sessionId());
+          set("utm_source", c.source);
+          set("utm_medium", c.medium);
+          set("utm_campaign", c.campaign);
+        }
       }}
     >
       <input ref={startedAt} type="hidden" name="t" defaultValue="" />
       <input ref={eventId} type="hidden" name="event_id" defaultValue="" />
+      <div ref={visit} hidden>
+        {["session_id", "utm_source", "utm_medium", "utm_campaign"].map((name) => (
+          <input key={name} type="hidden" name={name} defaultValue="" />
+        ))}
+      </div>
       <div className="field-trap" aria-hidden>
         <label htmlFor="company">Company</label>
         <input id="company" name="company" tabIndex={-1} autoComplete="off" />
