@@ -1,12 +1,19 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
+import { sendServerEvent } from "@/lib/site/meta-capi";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type InquiryState = {
   ok?: boolean;
+  /**
+   * Set only when an inquiry was really saved: the browser sends its pixel
+   * "Lead" with this id, the same one the server sent Meta, so it counts once.
+   */
+  leadEventId?: string;
   error?: string;
   fields?: Partial<Record<"name" | "email" | "phone" | "message", string>>;
 };
@@ -99,5 +106,31 @@ export async function submitInquiry(_prev: InquiryState, formData: FormData): Pr
 
   revalidatePath("/admin/owner/inquiries");
   revalidatePath("/admin/owner");
-  return { ok: true };
+
+  // The Lead for Meta's Conversions API, once the visitor has their answer:
+  // a slow or failing Meta never holds up the form. Email and phone go only
+  // hashed; the message never goes.
+  const eventId = /^[\w-]{8,64}$/.test(String(formData.get("event_id") ?? ""))
+    ? String(formData.get("event_id"))
+    : crypto.randomUUID();
+  const jar = await cookies();
+  const userAgent = h.get("user-agent");
+  const sourceUrl = h.get("referer") ?? "https://www.dermasoulbd.com/inquiry";
+  after(() =>
+    sendServerEvent({
+      name: "Lead",
+      id: eventId,
+      sourceUrl,
+      user: {
+        email: parsed.data.email,
+        phone: phone || null,
+        ip,
+        userAgent,
+        fbp: jar.get("_fbp")?.value ?? null,
+        fbc: jar.get("_fbc")?.value ?? null,
+      },
+    }),
+  );
+
+  return { ok: true, leadEventId: eventId };
 }

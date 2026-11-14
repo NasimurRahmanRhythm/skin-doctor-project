@@ -7,6 +7,9 @@ import { socialDefaults } from "@/lib/site/content";
 import { SECTIONS, sectionByKey } from "@/lib/website-sections";
 import SectionManager, { type ManagedRow } from "./section-manager";
 import { GoogleReviewsForm, SocialLinksForm, type SocialLinks } from "./settings-forms";
+import PixelCard from "./pixel-card";
+import { capiConfigured } from "@/lib/site/meta-capi";
+import { META_PIXEL_ID } from "@/lib/site/pixel";
 
 const TABS = [
   ...SECTIONS.map((s) => ({ key: s.key as string, label: s.tab })),
@@ -14,6 +17,7 @@ const TABS = [
   // the form below still handles it. While hidden, ?tab=reviews falls back
   // to the first tab.
   // { key: "reviews", label: "Google reviews" },
+  { key: "pixel", label: "Meta Pixel" },
 ];
 
 /**
@@ -80,6 +84,8 @@ export default async function WebsitePage({
         <SectionManager def={def} rows={rows} />
       </div>
     );
+  } else if (tab === "pixel") {
+    body = <PixelCard pixelId={META_PIXEL_ID} capi={capiConfigured()} />;
   } else {
     const { data: s, error } = await supabase
       .from("site_settings")

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import type { SiteTreatment } from "@/lib/site/data";
 import SplitReveal from "@/components/site/fx/SplitReveal";
 import Reveal from "@/components/site/fx/Reveal";
 import { Arrow, ArrowUpRight, Sprig } from "@/components/site/Icons";
+import { track } from "@/lib/site/pixel";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -97,6 +98,15 @@ export default function TreatmentDetail({
     { title: "After your treatment", body: t.afterCare },
   ].filter((d) => d.body?.trim());
   const hasClosing = !!(t.closingTitle?.trim() || t.closingBody?.trim());
+
+  // Which treatment was looked at, for Meta: its name and group, nothing more.
+  useEffect(() => {
+    track("ViewContent", {
+      content_type: "treatment",
+      content_name: t.title,
+      ...(t.category ? { content_category: t.category } : {}),
+    });
+  }, [t.title, t.category]);
 
   return (
     <article className="tdetail">

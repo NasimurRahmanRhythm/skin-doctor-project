@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { inquiry } from "@/lib/site/content";
 import { Arrow } from "@/components/site/Icons";
+import { newEventId, track } from "@/lib/site/pixel";
 import { submitInquiry, type InquiryState } from "./actions";
 
 function Send() {
@@ -22,6 +23,15 @@ export default function InquiryForm({ about }: { about: string | null }) {
   // When the visitor first touched the form. A post with none, or one that
   // comes back a moment later, is a script rather than a person.
   const startedAt = useRef<HTMLInputElement>(null);
+  // One id per inquiry, shared with the server's copy of the Lead for Meta.
+  const eventId = useRef<HTMLInputElement>(null);
+
+  // A Lead only for an inquiry that was really saved (spam is answered "ok"
+  // too, but without an id).
+  useEffect(() => {
+    if (state.leadEventId) track("Lead", {}, state.leadEventId);
+  }, [state.leadEventId]);
+
   if (state.ok) {
     return (
       <div className="inquiry-form">
@@ -41,9 +51,11 @@ export default function InquiryForm({ about }: { about: string | null }) {
       noValidate
       onFocus={() => {
         if (startedAt.current && !startedAt.current.value) startedAt.current.value = String(Date.now());
+        if (eventId.current && !eventId.current.value) eventId.current.value = newEventId();
       }}
     >
       <input ref={startedAt} type="hidden" name="t" defaultValue="" />
+      <input ref={eventId} type="hidden" name="event_id" defaultValue="" />
       <div className="field-trap" aria-hidden>
         <label htmlFor="company">Company</label>
         <input id="company" name="company" tabIndex={-1} autoComplete="off" />

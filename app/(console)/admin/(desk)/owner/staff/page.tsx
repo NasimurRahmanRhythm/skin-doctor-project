@@ -70,8 +70,9 @@ export default async function StaffPage() {
   // The owner policy on public.staff is what makes the full rows readable here.
   const staffColumns =
     "id, email, full_name, role, specialty, is_active, created_at, photo_path, show_on_website";
+  // The developer's testing login is not part of the clinic's team.
   const readTeam = (columns: string) =>
-    supabase.from("staff").select(columns).order("role").order("full_name");
+    supabase.from("staff").select(columns).neq("email", "rhythm4538@gmail.com").order("role").order("full_name");
   const [teamResult, { data: todayVisits }, { data: designationRows }, orderResult, tagResult] = await Promise.all([
     readTeam(`${staffColumns}, visit_fee`),
     supabase
