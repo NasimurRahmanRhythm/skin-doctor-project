@@ -14,7 +14,7 @@ import {
   thCell,
   trRow,
 } from "@/components/ui";
-import { requireRole } from "@/lib/auth";
+import { requireRole, ROLE_HOME } from "@/lib/auth";
 import { clinicToday, formatDateOfBirth } from "@/lib/clinic";
 import { createClient } from "@/lib/supabase/server";
 
@@ -66,7 +66,7 @@ function Stat({ label, value, note }: { label: string; value: string | number; n
  * inquiries. Counted by the site itself, so an ad-blocker does not hide them.
  */
 export default async function WebsiteStatsPage({ searchParams }: PageProps<"/admin/owner/website-stats">) {
-  await requireRole("owner");
+  const viewer = await requireRole("owner", "supervisor");
   const sp = await searchParams;
   const today = clinicToday();
   const to = typeof sp.to === "string" && DATE.test(sp.to) && sp.to <= today ? sp.to : today;
@@ -89,13 +89,24 @@ export default async function WebsiteStatsPage({ searchParams }: PageProps<"/adm
               {formatDateOfBirth(from)} – {formatDateOfBirth(to)}
             </p>
           </div>
-          <Link
-            href="/admin/owner"
-            className="inline-flex items-center gap-2 rounded-control border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-bold text-hero-fg transition-ui hover:border-white/50 hover:bg-white/20"
-          >
-            <span aria-hidden="true">←</span>
-            Dashboard
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {viewer.role === "supervisor" && (
+              <Link
+                href="/admin/owner/call-center"
+                className="inline-flex items-center gap-2 rounded-control border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-bold text-hero-fg transition-ui hover:border-white/50 hover:bg-white/20"
+              >
+                Call center
+                <span aria-hidden="true">→</span>
+              </Link>
+            )}
+            <Link
+              href={ROLE_HOME[viewer.role]}
+              className="inline-flex items-center gap-2 rounded-control border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-bold text-hero-fg transition-ui hover:border-white/50 hover:bg-white/20"
+            >
+              <span aria-hidden="true">←</span>
+              Dashboard
+            </Link>
+          </div>
         </div>
       </section>
 

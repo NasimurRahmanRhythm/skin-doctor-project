@@ -108,6 +108,9 @@ export default async function PrintPage({
             <PadSection title="Advice">
               <ReadNumbered items={pad.advices} />
             </PadSection>
+            <PadSection title="Follow Up">
+              <ReadFollowUp text={pad.followUp} />
+            </PadSection>
           </>
         }
         right={
@@ -120,9 +123,6 @@ export default async function PrintPage({
               ) : (
                 <ReadMedicines items={pad.medicines} />
               )}
-            </PadSection>
-            <PadSection title="Follow Up">
-              <ReadFollowUp text={pad.followUp} />
             </PadSection>
           </div>
         }

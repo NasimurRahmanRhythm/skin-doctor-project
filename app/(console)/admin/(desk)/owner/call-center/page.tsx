@@ -2,7 +2,7 @@ import Link from "next/link";
 import CallLogList, { CALLS_PER_PAGE } from "@/components/call-log-list";
 import CallReportView from "@/components/call-report";
 import FollowUpList from "@/components/follow-up-list";
-import { requireRole } from "@/lib/auth";
+import { requireRole, ROLE_HOME } from "@/lib/auth";
 import { CALL_COLUMNS, cleanFields, type CallLog, type CallReport } from "@/lib/call-log";
 import { applyCallFilters, callStats, getCallOptions, readCallFilters } from "@/lib/call-log-query";
 import { clinicDayRange, clinicToday } from "@/lib/clinic";
@@ -13,11 +13,16 @@ import ExportDialog from "./export-dialog";
 
 export const metadata = { title: "Call center" };
 
-/** Every call the call center has logged, with filters, pages and the CSV export. */
+/**
+ * Every call the call center has logged, with filters, pages and the CSV
+ * export. A supervisor sees the same, read only: no delete, import, form
+ * options or sending to reception.
+ */
 export default async function OwnerCallCenterPage({
   searchParams,
 }: PageProps<"/admin/owner/call-center">) {
-  const owner = await requireRole("owner");
+  const owner = await requireRole("owner", "supervisor");
+  const isOwner = owner.role === "owner";
   const sp = await searchParams;
   const filters = readCallFilters(sp);
   const pageParam = Number(typeof sp.page === "string" ? sp.page : "1");
@@ -66,10 +71,13 @@ export default async function OwnerCallCenterPage({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {[
-              { href: "/admin/owner/call-center/import", label: "Import calls" },
-              { href: "/admin/owner/call-center/options", label: "Form options" },
-            ].map((l) => (
+            {(isOwner
+              ? [
+                  { href: "/admin/owner/call-center/import", label: "Import calls" },
+                  { href: "/admin/owner/call-center/options", label: "Form options" },
+                ]
+              : [{ href: "/admin/owner/website-stats", label: "Website stats" }]
+            ).map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
@@ -80,7 +88,7 @@ export default async function OwnerCallCenterPage({
               </Link>
             ))}
             <Link
-              href="/admin/owner"
+              href={ROLE_HOME[owner.role]}
               className="inline-flex items-center gap-2 rounded-control border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-bold text-hero-fg transition-ui hover:border-white/50 hover:bg-white/20"
             >
               <span aria-hidden="true">←</span>
@@ -117,9 +125,13 @@ export default async function OwnerCallCenterPage({
           <CallLogList
             options={options}
             title="All calls"
-            hint="Newest first. Delete only a call logged by mistake — it cannot be undone."
+            hint={
+              isOwner
+                ? "Newest first. Delete only a call logged by mistake — it cannot be undone."
+                : "Newest first."
+            }
             basePath="/admin/owner/call-center"
-            referAction={referCall}
+            referAction={isOwner ? referCall : undefined}
             rows={rows}
             stats={stats}
             filters={filters}
@@ -127,7 +139,7 @@ export default async function OwnerCallCenterPage({
             total={total}
             agents={agents}
             agentNameById={agentNameById}
-            deleteAction={deleteCall}
+            deleteAction={isOwner ? deleteCall : undefined}
             trailing={
               <ExportDialog
                 filters={filters}

@@ -271,7 +271,10 @@ function InvestigationList({
 
 const SLOT_LABELS = ["Morning", "Noon", "Night"] as const;
 
-/** One of the three 0 + 0 + 0 boxes. Selects on focus so a digit replaces it. */
+/**
+ * One of the three 0 + 0 + 0 boxes. Selects on focus so a digit replaces it.
+ * May stay empty: with all three empty the pad prints no dose at all.
+ */
 function DoseBox({
   value,
   label,
@@ -293,9 +296,7 @@ function DoseBox({
       title={label}
       onFocus={(e) => e.target.select()}
       onChange={(e) => onChange(e.target.value.replace(/[^0-9½¼¾./]/g, ""))}
-      onBlur={(e) => {
-        if (!e.target.value.trim()) onChange("0");
-      }}
+      placeholder="0"
       className="h-8 w-9 rounded-md border border-hairline bg-surface text-center text-sm font-bold tabular-nums text-fg transition-ui hover:border-primary/50 focus:border-primary focus:shadow-[0_0_0_3px_var(--ring)] focus:outline-none"
     />
   );
@@ -311,7 +312,8 @@ function MealToggle({
   const opt = (v: TabletMedicine["meal"], label: string) => (
     <button
       type="button"
-      onClick={() => onChange(v)}
+      // Clicking the chosen one again clears it: the meal is optional.
+      onClick={() => onChange(value === v ? undefined : v)}
       aria-pressed={value === v}
       className={`rounded-[7px] px-2.5 py-1 text-xs font-semibold transition-ui ${
         value === v
@@ -334,13 +336,13 @@ function DurationPicker({
   value,
   onChange,
 }: {
-  value: Duration;
-  onChange: (v: Duration) => void;
+  value: Duration | undefined;
+  onChange: (v: Duration | undefined) => void;
 }) {
-  const count = value.unit === "continue" ? 7 : value.count;
+  const count = !value || value.unit === "continue" ? 7 : value.count;
   return (
     <div className="flex shrink-0 items-center gap-1.5">
-      {value.unit !== "continue" && (
+      {value && value.unit !== "continue" && (
         <input
           type="number"
           min={1}
@@ -356,14 +358,15 @@ function DurationPicker({
         />
       )}
       <select
-        value={value.unit}
+        value={value?.unit ?? ""}
         aria-label="For how long"
         onChange={(e) => {
-          const unit = e.target.value as Duration["unit"];
-          onChange(unit === "continue" ? { unit } : { unit, count });
+          const unit = e.target.value as Duration["unit"] | "";
+          onChange(unit === "" ? undefined : unit === "continue" ? { unit } : { unit, count });
         }}
         className="h-8 rounded-md border border-hairline bg-surface px-2 text-xs font-semibold text-fg transition-ui focus:border-primary focus:shadow-[0_0_0_3px_var(--ring)] focus:outline-none"
       >
+        <option value="">Duration —</option>
         <option value="continue">Continue</option>
         <option value="days">Days</option>
         <option value="weeks">Weeks</option>
@@ -373,65 +376,10 @@ function DurationPicker({
   );
 }
 
-/** A small whole-number box for a procedure's sessions and interval. */
-function CountBox({
-  value,
-  label,
-  max,
-  onChange,
-}: {
-  value: number;
-  label: string;
-  max: number;
-  onChange: (n: number) => void;
-}) {
-  return (
-    <input
-      type="number"
-      min={1}
-      max={max}
-      value={value}
-      aria-label={label}
-      title={label}
-      onFocus={(e) => e.target.select()}
-      onChange={(e) => onChange(Math.max(1, Math.min(max, Math.trunc(Number(e.target.value)) || 1)))}
-      className="h-8 w-14 rounded-md border border-hairline bg-surface text-center text-sm font-semibold text-fg transition-ui focus:border-primary focus:shadow-[0_0_0_3px_var(--ring)] focus:outline-none"
-    />
-  );
-}
-
-/** "need [7] sessions in every [15] [days]" under a procedure's name. */
-function ProcedureSchedule({
-  value,
-  onChange,
-}: {
-  value: ProcedureMedicine;
-  onChange: (patch: Partial<ProcedureMedicine>) => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted">
-      <span>need</span>
-      <CountBox value={value.sessions} label="How many sessions" max={100} onChange={(sessions) => onChange({ sessions })} />
-      <span>{value.sessions === 1 ? "session" : "sessions"} in every</span>
-      <CountBox value={value.every} label="Every how many" max={365} onChange={(every) => onChange({ every })} />
-      <select
-        value={value.unit}
-        aria-label="Days, weeks or months"
-        onChange={(e) => onChange({ unit: e.target.value as ProcedureMedicine["unit"] })}
-        className="h-8 rounded-md border border-hairline bg-surface px-2 text-xs font-semibold text-fg transition-ui focus:border-primary focus:shadow-[0_0_0_3px_var(--ring)] focus:outline-none"
-      >
-        <option value="days">Days</option>
-        <option value="weeks">Weeks</option>
-        <option value="months">Months</option>
-      </select>
-    </div>
-  );
-}
-
 /**
- * One list on the Rx: `procedures` (the Procedure part at the top: each a
- * name and "need N sessions in every …") or `medicines` (medicines and
- * non-medicines, chosen with the toggle above the add box).
+ * One list on the Rx: `procedures` (the Procedure part at the top: each just
+ * free text, written in a text area and added with Enter) or `medicines`
+ * (medicines and skincare, chosen with the toggle above the add box).
  */
 function MedicineList({
   items,
@@ -459,13 +407,12 @@ function MedicineList({
     const row = items.length;
     onChange([...items, emptyMedicine(name, kind)]);
     setDraft("");
-    // A tablet goes straight to its dose, a procedure to its session count; a
-    // non-medicine has neither, so the cursor stays in the add box for the next
-    // one. The row exists after the paint.
-    if (kind !== "other") requestAnimationFrame(() => firstDose.current[row]?.focus());
+    // A tablet goes straight to its dose; a procedure or skincare item has
+    // none, so the cursor stays in the add box for the next one. The row
+    // exists after the paint.
+    if (kind === "tablet") requestAnimationFrame(() => firstDose.current[row]?.focus());
   }
 
-  /** Tablets and procedures have schedule fields to change. */
   const update = (i: number, patch: Partial<TabletMedicine> | Partial<ProcedureMedicine>) =>
     onChange(items.map((m, j) => (j === i ? ({ ...m, ...patch } as Medicine) : m)));
 
@@ -486,20 +433,20 @@ function MedicineList({
               key={i}
               className="group rounded-control border border-transparent px-2 py-2 -mx-2 transition-ui hover:border-hairline hover:bg-surface/80 focus-within:border-hairline focus-within:bg-surface/80"
             >
-              <div className={`flex gap-2 ${m.kind === "other" ? "items-start" : "items-center"}`}>
+              <div className={`flex gap-2 ${m.kind === "tablet" || m.kind === undefined ? "items-center" : "items-start"}`}>
                 <span className="w-5 shrink-0 text-right text-[15px] font-semibold text-muted">
                   {i + 1}.
                 </span>
                 <InlineText
                   value={m.name}
-                  multiline={m.kind === "other"}
+                  multiline={m.kind === "other" || m.kind === "procedure"}
                   label={`${noun} ${i + 1}`}
                   onChange={(v) => update(i, { name: v })}
                   onBlur={(v) => {
                     if (!v.trim()) onChange(items.filter((_, j) => j !== i));
                   }}
                   onEnterKey={() =>
-                    m.kind === "other"
+                    m.kind === "other" || m.kind === "procedure"
                       ? addRef.current?.focus()
                       : firstDose.current[i]?.focus()
                   }
@@ -532,16 +479,6 @@ function MedicineList({
                   onClick={() => onChange(items.filter((_, j) => j !== i))}
                 />
               </div>
-
-              {m.kind === "procedure" && (
-                <div
-                  className="mt-1.5 pl-7"
-                  // Enter on the name, or adding one, lands on the session count.
-                  ref={(el) => void (firstDose.current[i] = el?.querySelector("input") ?? null)}
-                >
-                  <ProcedureSchedule value={m} onChange={(patch) => update(i, patch)} />
-                </div>
-              )}
 
               {(m.kind === undefined || m.kind === "tablet") && (
               <div className="mt-1.5 flex flex-wrap items-center gap-y-2 pl-7">
@@ -587,7 +524,7 @@ function MedicineList({
         {(
           [
             ["tablet", "Medicine"],
-            ["other", "Non-medicine"],
+            ["other", "Skincare"],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -610,7 +547,7 @@ function MedicineList({
         ))}
       </div>
       )}
-      {kind !== "other" ? (
+      {kind === "tablet" ? (
         <div className="flex gap-2">
           <input
             ref={(el) => {
@@ -619,11 +556,7 @@ function MedicineList({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => onEnter(e, add)}
-            placeholder={
-              kind === "procedure"
-                ? "Procedure, e.g. Laser hair removal — press Enter"
-                : "Medicine, e.g. Tab. Cetirizine 10 mg — press Enter"
-            }
+            placeholder="Medicine, e.g. Tab. Cetirizine 10 mg — press Enter"
             className={`${addInput} text-sm`}
           />
           <button
@@ -636,7 +569,8 @@ function MedicineList({
           </button>
         </div>
       ) : (
-        // Several lines make one entry: Enter is a new line, Save adds it.
+        // Several lines make one entry. A procedure is added with Enter
+        // (Shift+Enter for a new line); skincare with Ctrl+Enter or Save.
         <div className="flex items-end gap-2">
           <textarea
             ref={(el) => {
@@ -646,22 +580,27 @@ function MedicineList({
             rows={3}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.nativeEvent.isComposing) {
+              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+              if (kind === "procedure" ? !e.shiftKey : e.ctrlKey || e.metaKey) {
                 e.preventDefault();
                 add();
               }
             }}
-            placeholder={"e.g. Sunscreen SPF 50\nApply twice daily on face and neck"}
+            placeholder={
+              kind === "procedure"
+                ? "Write a procedure — press Enter to add it, then write the next"
+                : "e.g. Sunscreen SPF 50\nApply twice daily on face and neck"
+            }
             className={`${addInput} min-h-[4.5rem] resize-none text-sm leading-snug [field-sizing:content]`}
           />
           <button
             type="button"
             onClick={add}
             disabled={!draft.trim()}
-            title="Save (Ctrl+Enter)"
+            title={kind === "procedure" ? "Add (Enter)" : "Save (Ctrl+Enter)"}
             className={`${btnGhost} shrink-0 px-4 py-2`}
           >
-            Save
+            {kind === "procedure" ? "Add" : "Save"}
           </button>
         </div>
       )}
@@ -911,6 +850,22 @@ export default function RxEditor({
                 addRef={advicesRef}
               />
             </PadSection>
+
+            <PadSection
+              title="Follow Up"
+              action={<PlusButton label="Write the follow-up" target={followUpRef} />}
+            >
+              {/* One block of text, saved with the rest of the pad. */}
+              <textarea
+                ref={followUpRef}
+                value={pad.followUp}
+                rows={3}
+                onChange={(e) => set("followUp", e.target.value)}
+                placeholder={"e.g. Come back after 2 weeks\nBring the previous reports"}
+                aria-label="Follow up"
+                className={`${addInput} min-h-[4.5rem] resize-none text-[13.5px] leading-snug [field-sizing:content]`}
+              />
+            </PadSection>
           </>
         }
         right={
@@ -946,21 +901,6 @@ export default function RxEditor({
               </RxPart>
             </PadSection>
 
-            <PadSection
-              title="Follow Up"
-              action={<PlusButton label="Write the follow-up" target={followUpRef} />}
-            >
-              {/* One block of text, saved with the rest of the pad. */}
-              <textarea
-                ref={followUpRef}
-                value={pad.followUp}
-                rows={3}
-                onChange={(e) => set("followUp", e.target.value)}
-                placeholder={"e.g. Come back after 2 weeks\nBring the previous reports"}
-                aria-label="Follow up"
-                className={`${addInput} min-h-[4.5rem] resize-none text-[13.5px] leading-snug [field-sizing:content]`}
-              />
-            </PadSection>
           </div>
         }
       />

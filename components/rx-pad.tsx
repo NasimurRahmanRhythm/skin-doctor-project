@@ -1,10 +1,7 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { CLINIC_ADDRESS, CLINIC_PHONES } from "@/lib/clinic";
 import {
-  formatDose,
-  formatDuration,
-  formatProcedure,
-  MEAL_LABEL,
+  scheduleParts,
   type Investigation,
   type Medicine,
   type PadData,
@@ -309,16 +306,19 @@ function MedicineLines({ items }: { items: Medicine[] }) {
           <div className="flex gap-2 text-[15px] font-semibold">
             <span className="w-5 shrink-0 text-right text-muted">{i + 1}.</span>
             <span className="whitespace-pre-line">
-              {m.kind === "procedure" ? formatProcedure(m) : m.name}
+              {m.name}
             </span>
           </div>
-          {(m.kind === undefined || m.kind === "tablet") && (
+          {(m.kind === undefined || m.kind === "tablet") && scheduleParts(m).length > 0 && (
+            // Only what the doctor filled in: dose, meal, duration, with the
+            // dotted leader between them.
             <div className="mt-0.5 flex items-end pl-7 text-[13px]">
-              <span className="font-semibold tabular-nums">{formatDose(m.dose)}</span>
-              <Leader />
-              <span>{MEAL_LABEL[m.meal]}</span>
-              <Leader />
-              <span className="font-medium">{formatDuration(m.duration)}</span>
+              {scheduleParts(m).map((part, k) => (
+                <Fragment key={k}>
+                  {k > 0 && <Leader />}
+                  <span className={k === 0 ? "font-semibold tabular-nums" : ""}>{part}</span>
+                </Fragment>
+              ))}
             </div>
           )}
         </li>
@@ -334,8 +334,8 @@ export function ReadFollowUp({ text }: { text: string }) {
 }
 
 /**
- * A written pad, compact and read-only: the notes on the left, the Rx on the
- * right. For looking back at a visit, not for printing — print has the sheet.
+ * A written pad, compact and read-only: the notes and follow-up on the left,
+ * the Rx on the right. For looking back at a visit, not for printing — print has the sheet.
  */
 export function PadSummary({ pad }: { pad: PadData }) {
   const head = "block text-[11px] font-bold uppercase tracking-wider text-accent";
@@ -360,21 +360,17 @@ export function PadSummary({ pad }: { pad: PadData }) {
             <div className="mt-1.5"><ReadNumbered items={pad.advices} /></div>
           </div>
         )}
+        {pad.followUp.trim() && (
+          <div>
+            <span className={head}>Follow up</span>
+            <div className="mt-1.5"><ReadFollowUp text={pad.followUp} /></div>
+          </div>
+        )}
       </div>
-      {(pad.medicines.length > 0 || pad.followUp.trim()) && (
-        <div className="space-y-4">
-          {pad.medicines.length > 0 && (
-            <div>
-              <span className={head}>Rx</span>
-              <div className="mt-1.5"><ReadMedicines items={pad.medicines} /></div>
-            </div>
-          )}
-          {pad.followUp.trim() && (
-            <div>
-              <span className={head}>Follow up</span>
-              <div className="mt-1.5"><ReadFollowUp text={pad.followUp} /></div>
-            </div>
-          )}
+      {pad.medicines.length > 0 && (
+        <div>
+          <span className={head}>Rx</span>
+          <div className="mt-1.5"><ReadMedicines items={pad.medicines} /></div>
         </div>
       )}
     </div>

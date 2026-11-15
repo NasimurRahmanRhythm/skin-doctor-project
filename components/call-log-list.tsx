@@ -75,7 +75,8 @@ export default function CallLogList({
   /** The owner's Reason and Outcome lists, for labels and the outcome filter. */
   options: CallOptions;
   /** "Send to reception": hands the caller over to the clinic's front desk. */
-  referAction: (formData: FormData) => Promise<void>;
+  /** Left out for a supervisor, who only reads. */
+  referAction?: (formData: FormData) => Promise<void>;
   trailing?: ReactNode;
 }) {
   const lastPage = Math.max(1, Math.ceil(total / CALLS_PER_PAGE));
@@ -235,6 +236,8 @@ export default function CallLogList({
                             {formatClinicDate(c.referred_at)}, {formatClinicTime(c.referred_at)}
                           </span>
                         </span>
+                      ) : !referAction ? (
+                        <span className="text-xs text-muted">—</span>
                       ) : (
                         <ConfirmForm
                           action={referAction}

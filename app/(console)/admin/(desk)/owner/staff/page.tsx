@@ -48,6 +48,7 @@ const ROLE_TONE: Record<string, string> = {
   nurse: "border-warn/35 bg-warn/12 text-warn",
   doctor: "border-primary/35 bg-primary-soft text-primary",
   call_center: "border-ok/35 bg-ok/10 text-ok",
+  supervisor: "border-primary/35 bg-primary-soft text-primary",
 };
 
 function RolePill({ role }: { role: string }) {
@@ -212,7 +213,7 @@ export default async function StaffPage() {
                       name={s.full_name}
                       photoUrl={publicImageUrl("staff-photos", s.photo_path)}
                       role={
-                        s.role === "owner" || s.role === "call_center"
+                        s.role === "owner" || s.role === "call_center" || s.role === "supervisor"
                           ? undefined
                           : (s.role as "receptionist" | "nurse" | "doctor")
                       }

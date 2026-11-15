@@ -86,7 +86,7 @@ export async function exportCalls(
   fieldsInput: string[],
   format: ExportFormat = "csv",
 ): Promise<ExportResult> {
-  const owner = await requireRole("owner");
+  const owner = await requireRole("owner", "supervisor");
   // Both arrive from the browser: checked again here.
   const filters = readCallFilters({ ...filtersInput });
   const fields = cleanFields(fieldsInput);

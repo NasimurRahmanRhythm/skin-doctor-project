@@ -18,32 +18,26 @@ export type Duration =
   | { unit: "days" | "weeks" | "months"; count: number };
 
 /**
- * A tablet carries a schedule: dose, meal and duration. Anything else — a
- * cream, a face wash, a sunscreen — is just its name; how to use it goes in
- * the name or in Advice. Medicines saved before the split have no `kind` and
- * are tablets.
+ * A medicine can carry a schedule — dose, meal and duration — every part of
+ * it optional: an empty dose, no meal or no duration is simply not printed.
+ * Skincare (a cream, a face wash, a sunscreen) is just its text. Medicines
+ * saved before the split have no `kind` and are tablets.
  */
 export type TabletMedicine = {
   kind?: "tablet";
   name: string;
-  /** Morning + noon + night. Strings, so "½" is a valid dose. */
+  /** Morning + noon + night. Strings, so "½" is a valid dose; all empty: no dose. */
   dose: [string, string, string];
-  meal: "after" | "before";
-  duration: Duration;
+  meal?: "after" | "before";
+  duration?: Duration;
 };
 
 export type OtherMedicine = { kind: "other"; name: string };
 
-/**
- * A course of sessions, printed as one line:
- * "<name> need <sessions> sessions in every <every> <unit>".
- */
+/** A procedure: just the doctor's own words, written in a text area. */
 export type ProcedureMedicine = {
   kind: "procedure";
   name: string;
-  sessions: number;
-  every: number;
-  unit: "days" | "weeks" | "months";
 };
 
 export type Medicine = TabletMedicine | OtherMedicine | ProcedureMedicine;
@@ -82,23 +76,22 @@ export const medicineSchema = z.union([
   z.object({ kind: z.literal("other"), name: otherName }),
   z.object({
     kind: z.literal("procedure"),
-    name: z.string().trim().min(1, "Every procedure needs a name.").max(200),
-    sessions: z.number().int().min(1).max(100),
-    every: z.number().int().min(1).max(365),
-    unit: z.enum(["days", "weeks", "months"]),
+    name: z.string().trim().min(1, "Every procedure needs some text.").max(1000),
   }),
   z.object({
     kind: z.literal("tablet").optional(),
     name: medicineName,
     dose: z.tuple([doseSlot, doseSlot, doseSlot]),
-    meal: z.enum(["after", "before"]),
-    duration: z.discriminatedUnion("unit", [
-      z.object({ unit: z.literal("continue") }),
-      z.object({
-        unit: z.enum(["days", "weeks", "months"]),
-        count: z.number().int().min(1).max(365),
-      }),
-    ]),
+    meal: z.enum(["after", "before"]).optional(),
+    duration: z
+      .discriminatedUnion("unit", [
+        z.object({ unit: z.literal("continue") }),
+        z.object({
+          unit: z.enum(["days", "weeks", "months"]),
+          count: z.number().int().min(1).max(365),
+        }),
+      ])
+      .optional(),
   }),
 ]);
 
@@ -202,11 +195,22 @@ export function readPad(v: PadSource): PadData {
 
 // ------------------------------------------------------------ formatting --
 
-export function formatDose(dose: TabletMedicine["dose"]): string {
+/** "1 + 0 + 1", or null when no dose was written at all. */
+export function formatDose(dose: TabletMedicine["dose"]): string | null {
+  if (dose.every((d) => !d.trim())) return null;
   return dose.map((d) => d.trim() || "0").join(" + ");
 }
 
-export const MEAL_LABEL: Record<TabletMedicine["meal"], string> = {
+/** A medicine's schedule as the pad prints it: only the parts written. */
+export function scheduleParts(m: TabletMedicine): string[] {
+  return [
+    formatDose(m.dose),
+    m.meal ? MEAL_LABEL[m.meal] : null,
+    m.duration ? formatDuration(m.duration) : null,
+  ].filter((p): p is string => Boolean(p));
+}
+
+export const MEAL_LABEL: Record<NonNullable<TabletMedicine["meal"]>, string> = {
   after: "After meal",
   before: "Before meal",
 };
@@ -215,13 +219,6 @@ export function formatDuration(d: Duration): string {
   if (d.unit === "continue") return "Continue";
   const unit = d.count === 1 ? d.unit.slice(0, -1) : d.unit;
   return `${d.count} ${unit}`;
-}
-
-/** "Laser need 7 sessions in every 15 days". */
-export function formatProcedure(p: ProcedureMedicine): string {
-  const sessions = `${p.sessions} ${p.sessions === 1 ? "session" : "sessions"}`;
-  const unit = p.every === 1 ? p.unit.slice(0, -1) : p.unit;
-  return `${p.name} need ${sessions} in every ${p.every} ${unit}`;
 }
 
 /** "53 Yrs 5 M" from a date of birth, the way the pad prints it. */
@@ -242,14 +239,9 @@ export function ageLabel(p: {
 
 export function emptyMedicine(name: string, kind: MedicineKind = "tablet"): Medicine {
   if (kind === "other") return { kind, name };
-  if (kind === "procedure") return { kind, name, sessions: 1, every: 1, unit: "weeks" };
-  return {
-    kind,
-    name,
-    dose: ["0", "0", "0"],
-    meal: "after",
-    duration: { unit: "continue" },
-  };
+  if (kind === "procedure") return { kind, name };
+  // Nothing scheduled yet: the doctor fills in only what applies.
+  return { kind, name, dose: ["", "", ""] };
 }
 
 /** The pad's date, "25/09/2026", in the clinic's timezone. */

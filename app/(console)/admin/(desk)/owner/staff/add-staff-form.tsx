@@ -80,6 +80,7 @@ export default function AddStaffForm({ designations }: { designations: string[] 
             <option value="nurse">Nurse</option>
             <option value="receptionist">Receptionist</option>
             <option value="call_center">Call center</option>
+            <option value="supervisor">Supervisor (website stats and call center only)</option>
             <option value="owner">Owner</option>
           </select>
         </div>
