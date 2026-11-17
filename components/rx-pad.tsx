@@ -290,7 +290,7 @@ export function ReadMedicines({ items }: { items: Medicine[] }) {
       </div>
       {medicines.length > 0 && (
         <div>
-          <span className={sub}>Medicine</span>
+          <span className={sub}>Medicine / Skincare</span>
           <div className="mt-1.5"><MedicineLines items={medicines} /></div>
         </div>
       )}

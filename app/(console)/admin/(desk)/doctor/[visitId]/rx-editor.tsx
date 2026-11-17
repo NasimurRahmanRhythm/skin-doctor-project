@@ -892,7 +892,7 @@ export default function RxEditor({
                   addRef={proceduresRef}
                 />
               </RxPart>
-              <RxPart title="Medicine" label="Add a medicine" target={medicinesRef}>
+              <RxPart title="Medicine / Skincare" label="Add a medicine" target={medicinesRef}>
                 <MedicineList
                   items={medicines}
                   onChange={(v) => set("medicines", [...procedures, ...v])}
