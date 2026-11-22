@@ -2614,6 +2614,79 @@ img.rev-avatar {
   font-size: 0.8rem;
   color: var(--cream-soft);
 }
+.foot-legal {
+  display: flex;
+  gap: 18px;
+}
+.foot-legal a {
+  color: var(--cream-soft);
+}
+.foot-legal a:hover {
+  color: var(--cream);
+}
+.inquiry-consent {
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.inquiry-consent a,
+.legal-page a {
+  color: var(--gold-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Privacy Policy and Terms of Use: one readable column. */
+.legal-page {
+  padding: clamp(130px, 14vw, 190px) 0 clamp(80px, 10vw, 140px);
+  background: var(--paper);
+  color: var(--ink);
+}
+.legal-wrap {
+  max-width: 820px;
+}
+.legal-page .display {
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  margin: 10px 0 12px;
+}
+.legal-updated {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.legal-intro {
+  margin-top: 28px;
+  font-size: 1.05rem;
+}
+.legal-page section {
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.legal-page h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.legal-page section p,
+.legal-page section li {
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+.legal-page section p + p,
+.legal-page section ul + p,
+.legal-page section p + ul {
+  margin-top: 12px;
+}
+.legal-page section ul {
+  padding-left: 1.2em;
+  list-style: disc;
+}
+.legal-also {
+  margin-top: 48px;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
 .foot-social {
   display: flex;
   flex-wrap: wrap;

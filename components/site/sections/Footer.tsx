@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "motion/react";
 import { brand, footer, instagramChatUrl, whatsappUrl } from "@/lib/site/content";
 import type { SiteSocialLink, SocialNetwork } from "@/lib/site/data";
@@ -99,6 +100,10 @@ export default function Footer({ social = [] }: { social?: SiteSocialLink[] }) {
 
       <div className="wrap foot-bottom">
         <span>{footer.legal}</span>
+        <nav className="foot-legal" aria-label="Legal">
+          <Link href="/privacy">Privacy Policy</Link>
+          <Link href="/terms">Terms of Use</Link>
+        </nav>
       </div>
     </footer>
   );

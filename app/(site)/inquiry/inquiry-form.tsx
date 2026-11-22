@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { inquiry } from "@/lib/site/content";
@@ -140,6 +141,10 @@ export default function InquiryForm({ about }: { about: string | null }) {
       </div>
 
       <Send />
+      <p className="inquiry-consent">
+        By sending, you agree to our <Link href="/privacy">Privacy Policy</Link> and{" "}
+        <Link href="/terms">Terms of Use</Link>.
+      </p>
       {state.error && (
         <p className="inquiry-msg is-error" role="alert">
           {state.error}
